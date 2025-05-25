@@ -1,0 +1,10 @@
+name: RandomEvents
+version: '1.0'
+main: nc.randomEvents.RandomEvents
+api-version: '1.21'
+commands:
+  randomevents:
+    description: Manage random events
+    usage: /randomevents [help]
+    permission: op
+    aliases: [re]

@@ -1,0 +1,9 @@
+/build
+/.gradle
+/.gradle
+/.gradle/buildOutputCleanup
+/.idea
+/bin
+config.txt
+/.vscode
+/.env
