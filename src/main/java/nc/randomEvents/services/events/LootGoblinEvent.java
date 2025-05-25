@@ -3,7 +3,7 @@ package nc.randomEvents.services.events;
 import nc.randomEvents.RandomEvents;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
-import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Chest;
@@ -82,17 +82,21 @@ public class LootGoblinEvent implements Event, Listener {
         }
 
         Zombie goblin = (Zombie) world.spawnEntity(spawnLoc, EntityType.ZOMBIE);
-        goblin.setBaby(true);
-        goblin.setCustomName(ChatColor.GOLD + "Loot Goblin");
+        goblin.setAge(-1); // -1 for baby, 0 for adult
+        goblin.customName(Component.text("Loot Goblin", NamedTextColor.GOLD));
         goblin.setCustomNameVisible(true);
         goblin.getPersistentDataContainer().set(goblinUniqueIdKey, PersistentDataType.STRING, goblin.getUniqueId().toString());
         goblin.setMetadata(LOOT_GOBLIN_METADATA_KEY, new FixedMetadataValue(plugin, true));
 
-        AttributeModifier speedBoost = new AttributeModifier(UUID.randomUUID(), "goblin_speed", GOBLIN_SPEED_MULTIPLIER - 1.0, AttributeModifier.Operation.MULTIPLY_SCALAR_1, EquipmentSlot.FEET);
-        goblin.getAttribute(Attribute.MOVEMENT_SPEED).addModifier(speedBoost);
+        AttributeInstance speedAttribute = goblin.getAttribute(Attribute.MOVEMENT_SPEED);
+        if (speedAttribute != null) {
+            speedAttribute.setBaseValue(speedAttribute.getBaseValue() * GOBLIN_SPEED_MULTIPLIER);
+        }
         goblin.setSilent(true);
 
-        player.sendMessage(ChatColor.YELLOW + "You hear a faint giggle... a " + ChatColor.GOLD + "Loot Goblin" + ChatColor.YELLOW + " has appeared nearby!");
+        player.sendMessage(Component.text("You hear a faint giggle... a ", NamedTextColor.YELLOW)
+            .append(Component.text("Loot Goblin", NamedTextColor.GOLD))
+            .append(Component.text(" has appeared nearby!", NamedTextColor.YELLOW)));
         world.playSound(goblin.getLocation(), Sound.ENTITY_PIGLIN_JEALOUS, SoundCategory.HOSTILE, 1.0f, 1.5f);
 
         GoblinTask task = new GoblinTask(goblin, player);
@@ -398,7 +402,6 @@ public class LootGoblinEvent implements Event, Listener {
             Location goblinLoc = goblin.getLocation();
             
             // Calculate a random point to flee to
-            double angle = random.nextDouble() * 2 * Math.PI; // Random angle
             double fleeDistance = MIN_FLEE_DISTANCE + (random.nextDouble() * 10); // Random distance between 10-20 blocks
             
             // Add some randomness to the flee direction
