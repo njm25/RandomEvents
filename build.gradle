@@ -7,20 +7,16 @@ group = 'nc'
 version = '1.0'
 
 repositories {
-    mavenCentral()
-    maven {
-        name = "spigotmc-repo"
-        url = "https://hub.spigotmc.org/nexus/content/repositories/snapshots/"
-    }
-    maven {
-        name = "sonatype"
-        url = "https://oss.sonatype.org/content/groups/public/"
-    }
+  maven {
+    name = "papermc"
+    url = uri("https://repo.papermc.io/repository/maven-public/")
+  }
 }
 
 dependencies {
-    compileOnly("org.spigotmc:spigot-api:1.21.5-R0.1-SNAPSHOT")
+  compileOnly("io.papermc.paper:paper-api:1.21.5-R0.1-SNAPSHOT")
 }
+
 
 tasks {
     runServer {

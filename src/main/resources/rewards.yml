@@ -1,0 +1,25 @@
+rewards:
+  DIAMOND:
+    chance: 10 # Relative weight for selection
+    minAmount: 1
+    maxAmount: 3
+  IRON_INGOT:
+    chance: 30
+    minAmount: 5
+    maxAmount: 10
+  GOLD_INGOT:
+    chance: 20
+    minAmount: 2
+    maxAmount: 5
+  EMERALD:
+    chance: 5
+    minAmount: 1
+    maxAmount: 2
+  APPLE:
+    chance: 50
+    minAmount: 3
+    maxAmount: 8
+  BREAD:
+    chance: 40
+    minAmount: 2
+    maxAmount: 6 

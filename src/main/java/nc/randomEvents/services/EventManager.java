@@ -3,6 +3,8 @@ package nc.randomEvents.services;
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.services.events.Event;
 import nc.randomEvents.services.events.SoundEvent;
+import nc.randomEvents.services.events.MeteorEvent;
+import nc.randomEvents.services.events.LootGoblinEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -25,6 +27,8 @@ public class EventManager {
 
     private void registerEvents() {
         addEvent(new SoundEvent());
+        addEvent(new MeteorEvent(plugin));
+        addEvent(new LootGoblinEvent(plugin));
         // Register other events here
     }
 
