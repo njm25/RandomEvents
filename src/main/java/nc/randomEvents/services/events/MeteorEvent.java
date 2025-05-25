@@ -3,7 +3,6 @@ package nc.randomEvents.services.events;
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.services.RewardGenerator;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.World;
@@ -16,6 +15,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 
 import java.util.List;
 import java.util.Random;
@@ -45,7 +47,8 @@ public class MeteorEvent implements Event, Listener {
     @Override
     public void execute(List<Player> players) {
         for (Player player : players) {
-            player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&6&lOh no! &eLook up! Meteors are incoming!"));
+            player.sendMessage(Component.text("Oh no! ", NamedTextColor.GOLD).decorate(TextDecoration.BOLD)
+                .append(Component.text("Look up! Meteors are incoming!", NamedTextColor.YELLOW)));
 
             new BukkitRunnable() {
                 int meteorsToSpawn = random.nextInt(6) + 7; // 7-12 meteors per player

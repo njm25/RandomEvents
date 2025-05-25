@@ -23,6 +23,8 @@ import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -284,7 +286,7 @@ public class LootGoblinEvent implements Event, Listener {
             if (isFleeing) {
                 if ((System.currentTimeMillis() - spawnTime) / 1000 > FLEE_TIMEOUT_SECONDS + (fleeAttempts * 5)) {
                     plugin.getLogger().info("Loot Goblin escaped from " + initialPlayerTarget.getName());
-                    initialPlayerTarget.sendMessage(ChatColor.RED + "The Loot Goblin got away!");
+                    initialPlayerTarget.sendMessage(Component.text("The Loot Goblin got away!", NamedTextColor.RED));
                     cleanupGoblin(goblin.getUniqueId(), true);
                     return;
                 }
@@ -352,16 +354,16 @@ public class LootGoblinEvent implements Event, Listener {
                         String itemDesc = stackStolen.getAmount() > 1 ? 
                             stackStolen.getAmount() + " " + stackStolen.getType().toString().toLowerCase().replace('_', ' ') :
                             "a " + stackStolen.getType().toString().toLowerCase().replace('_', ' ');
-                        initialPlayerTarget.sendMessage(ChatColor.RED + "The Loot Goblin stole " + itemDesc + " from a chest!");
+                        initialPlayerTarget.sendMessage(Component.text("The Loot Goblin stole " + itemDesc + " from a chest!", NamedTextColor.RED));
                         goblin.getWorld().playSound(goblin.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1.0f, 1.2f);
                     } else {
                         // Failed to remove (e.g. item changed by another player), goblin gives up on this chest
-                        initialPlayerTarget.sendMessage(ChatColor.YELLOW + "The Loot Goblin fumbled with the chest and gave up!");
+                        initialPlayerTarget.sendMessage(Component.text("The Loot Goblin fumbled with the chest and gave up!", NamedTextColor.YELLOW));
                         targetChest = null; // Will try to find another or go aggro
                         hasReachedChest = false;
                     }
                 } else {
-                     initialPlayerTarget.sendMessage(ChatColor.YELLOW + "The Loot Goblin peeked into an empty chest!");
+                     initialPlayerTarget.sendMessage(Component.text("The Loot Goblin peeked into an empty chest!", NamedTextColor.YELLOW));
                      targetChest = null; // Will try to find another or go aggro
                      hasReachedChest = false;
                 }
@@ -381,7 +383,7 @@ public class LootGoblinEvent implements Event, Listener {
             double distanceToPlayer = goblin.getLocation().distance(initialPlayerTarget.getLocation());
             if (distanceToPlayer > FLEE_RADIUS && random.nextDouble() < 0.1) { // 10% chance to despawn when far enough
                 plugin.getLogger().info("Loot Goblin escaped from " + initialPlayerTarget.getName());
-                initialPlayerTarget.sendMessage(ChatColor.RED + "The Loot Goblin disappeared into the shadows!");
+                initialPlayerTarget.sendMessage(Component.text("The Loot Goblin disappeared into the shadows!", NamedTextColor.RED));
                 cleanupGoblin(goblin.getUniqueId(), true);
                 return;
             }
