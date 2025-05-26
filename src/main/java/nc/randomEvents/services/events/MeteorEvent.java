@@ -74,8 +74,8 @@ public class MeteorEvent implements Event, Listener {
         Location playerLoc = player.getLocation();
         World world = player.getWorld();
         
-        double offsetX = (random.nextDouble() - 0.5) * 96; // Decreased radius by 40% from -80 to +80 to -48 to +48
-        double offsetZ = (random.nextDouble() - 0.5) * 96; // Decreased radius
+        double offsetX = (random.nextDouble() - 0.5) * 40;
+        double offsetZ = (random.nextDouble() - 0.5) * 40;
         double spawnY = Math.min(world.getMaxHeight() - 5, playerLoc.getY() + 60 + random.nextInt(40));
 
         Location meteorSpawnLoc = new Location(world, playerLoc.getX() + offsetX, spawnY, playerLoc.getZ() + offsetZ);
