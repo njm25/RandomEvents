@@ -76,7 +76,7 @@ public class MeteorEvent implements Event, Listener {
         
         double offsetX = (random.nextDouble() - 0.5) * 40;
         double offsetZ = (random.nextDouble() - 0.5) * 40;
-        double spawnY = Math.min(world.getMaxHeight() - 5, playerLoc.getY() + 60 + random.nextInt(40));
+        double spawnY = 256;
 
         Location meteorSpawnLoc = new Location(world, playerLoc.getX() + offsetX, spawnY, playerLoc.getZ() + offsetZ);
 
