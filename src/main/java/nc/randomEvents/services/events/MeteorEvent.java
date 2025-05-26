@@ -54,7 +54,7 @@ public class MeteorEvent implements Event, Listener {
                 .append(Component.text("Look up! Meteors are incoming!", NamedTextColor.YELLOW)));
 
             new BukkitRunnable() {
-                int meteorsToSpawn = random.nextInt(10) + 15; // Increased from 7-12 to 15-24 meteors per player
+                int meteorsToSpawn = random.nextInt(10) + 10; // Increased from 7-12 to 15-24 meteors per player
                 int meteorsSpawned = 0;
 
                 @Override
