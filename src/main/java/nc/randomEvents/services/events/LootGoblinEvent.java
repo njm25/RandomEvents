@@ -38,6 +38,35 @@ public class LootGoblinEvent implements Event, Listener {
     private static final int CHEST_SEARCH_RADIUS = 20;
     private static final int FLEE_TIMEOUT_SECONDS = 60;
 
+    // Item Categorization Sets
+    private static final Set<Material> HIGH_VALUE_ITEMS = EnumSet.of(
+            Material.DIAMOND, Material.DIAMOND_BLOCK,
+            Material.EMERALD, Material.EMERALD_BLOCK,
+            Material.NETHERITE_INGOT, Material.NETHERITE_BLOCK, Material.NETHERITE_SCRAP, Material.ANCIENT_DEBRIS,
+            Material.TOTEM_OF_UNDYING, Material.ELYTRA,
+            Material.ENCHANTED_BOOK,
+            Material.NETHER_STAR, Material.BEACON,
+            Material.SHULKER_BOX
+    );
+
+    private static final Set<Material> VALUABLE_MINERALS = EnumSet.of(
+            Material.GOLD_INGOT, Material.GOLD_BLOCK, Material.RAW_GOLD, Material.RAW_GOLD_BLOCK,
+            Material.IRON_INGOT, Material.IRON_BLOCK, Material.RAW_IRON, Material.RAW_IRON_BLOCK,
+            Material.LAPIS_LAZULI, Material.LAPIS_BLOCK,
+            Material.REDSTONE, Material.REDSTONE_BLOCK,
+            Material.COAL, Material.COAL_BLOCK,
+            Material.QUARTZ, Material.QUARTZ_BLOCK,
+            Material.AMETHYST_SHARD, Material.COPPER_INGOT, Material.RAW_COPPER // Added Copper
+    );
+
+    // Helper method to identify armor
+    private static boolean isArmor(Material material) {
+        String name = material.name();
+        // Covers leather, chainmail, iron, gold, diamond, netherite, turtle helmets
+        return name.endsWith("_HELMET") || name.endsWith("_CHESTPLATE") ||
+               name.endsWith("_LEGGINGS") || name.endsWith("_BOOTS");
+    }
+
     public LootGoblinEvent(RandomEvents plugin) {
         this.plugin = plugin;
         this.goblinUniqueIdKey = new NamespacedKey(plugin, "loot_goblin_uuid");
@@ -361,28 +390,53 @@ public class LootGoblinEvent implements Event, Listener {
                 Chest chest = (Chest) targetChest.getState();
                 Inventory chestInv = chest.getBlockInventory();
                 List<ItemStack> possibleItems = new ArrayList<>();
+
+                // Prioritized item selection
+                List<ItemStack> highValueSteal = new ArrayList<>();
+                List<ItemStack> armorSteal = new ArrayList<>();
+                List<ItemStack> mineralSteal = new ArrayList<>();
+                List<ItemStack> foodSteal = new ArrayList<>();
+
                 for (ItemStack item : chestInv.getContents()) {
                     if (item != null && item.getType() != Material.AIR) {
-                        possibleItems.add(item.clone());
+                        Material mat = item.getType();
+                        if (HIGH_VALUE_ITEMS.contains(mat)) {
+                            highValueSteal.add(item.clone());
+                        } else if (isArmor(mat)) {
+                            armorSteal.add(item.clone());
+                        } else if (VALUABLE_MINERALS.contains(mat)) {
+                            mineralSteal.add(item.clone());
+                        } else if (mat.isEdible()) {
+                            foodSteal.add(item.clone());
+                        }
                     }
+                }
+
+                if (!highValueSteal.isEmpty()) {
+                    possibleItems.addAll(highValueSteal);
+                } else if (!armorSteal.isEmpty()) {
+                    possibleItems.addAll(armorSteal);
+                } else if (!mineralSteal.isEmpty()) {
+                    possibleItems.addAll(mineralSteal);
+                } else if (!foodSteal.isEmpty()) {
+                    possibleItems.addAll(foodSteal);
                 }
 
                 if (!possibleItems.isEmpty()) {
                     ItemStack stolen = possibleItems.get(random.nextInt(possibleItems.size()));
-                    ItemStack stackStolen = stolen.clone(); // Goblin takes the whole stack
-                    // No need to set amount to 1 anymore since we want the whole stack
+                    // ItemStack stackStolen = stolen.clone(); // Already cloned when added to lists
 
                     // Try to remove the entire stack from the chest
-                    ItemStack toRemoveFromChest = stackStolen.clone();
+                    ItemStack toRemoveFromChest = stolen.clone(); // Use the chosen 'stolen' item for removal
                     HashMap<Integer, ItemStack> notRemoved = chestInv.removeItem(toRemoveFromChest);
                     
                     if (notRemoved.isEmpty()){ // Successfully removed
-                        carriedItem = stackStolen;
+                        carriedItem = stolen; // Use the 'stolen' item which is already a clone
                         goblin.getEquipment().setItemInMainHand(carriedItem);
                         goblin.setMetadata(STOLEN_ITEM_METADATA_KEY, new FixedMetadataValue(plugin, carriedItem));
-                        String itemDesc = stackStolen.getAmount() > 1 ? 
-                            stackStolen.getAmount() + " " + stackStolen.getType().toString().toLowerCase().replace('_', ' ') :
-                            "a " + stackStolen.getType().toString().toLowerCase().replace('_', ' ');
+                        String itemDesc = stolen.getAmount() > 1 ?
+                            stolen.getAmount() + " " + stolen.getType().toString().toLowerCase().replace('_', ' ') :
+                            "a " + stolen.getType().toString().toLowerCase().replace('_', ' ');
                         initialPlayerTarget.sendMessage(Component.text("The Loot Goblin stole " + itemDesc + " from a chest!", NamedTextColor.RED));
                         goblin.getWorld().playSound(goblin.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1.0f, 1.2f);
                     } else {
@@ -392,7 +446,7 @@ public class LootGoblinEvent implements Event, Listener {
                         hasReachedChest = false;
                     }
                 } else {
-                     initialPlayerTarget.sendMessage(Component.text("The Loot Goblin peeked into an empty chest!", NamedTextColor.YELLOW));
+                     initialPlayerTarget.sendMessage(Component.text("The Loot Goblin peeked into a chest, but found nothing of interest!", NamedTextColor.YELLOW)); // Changed message
                      targetChest = null; // Will try to find another or go aggro
                      hasReachedChest = false;
                 }
