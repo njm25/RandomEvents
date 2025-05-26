@@ -21,6 +21,15 @@ tiers:
         maxAmount: 3
   RARE:
     rewards:
+      DIAMOND_SWORD:
+        chance: 30
+        minAmount: 1
+        maxAmount: 1
+        enchantments:
+          - name: sharpness
+            level: 2
+          - name: knockback
+            level: 1
       DIAMOND:
         chance: 40
         minAmount: 1

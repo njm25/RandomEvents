@@ -5,7 +5,11 @@ import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.EnchantmentStorageMeta;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.NamespacedKey;
 
 import java.io.File;
 import java.io.InputStreamReader;
@@ -38,6 +42,17 @@ public class RewardGenerator {
             } catch (IllegalArgumentException e) {
                 return null; // Or throw an exception, or return a default
             }
+        }
+    }
+
+    // Inner class to hold enchantment details
+    private static class EnchantmentData {
+        Enchantment enchantment;
+        int level;
+
+        EnchantmentData(Enchantment enchantment, int level) {
+            this.enchantment = enchantment;
+            this.level = level;
         }
     }
 
@@ -114,7 +129,44 @@ public class RewardGenerator {
                         continue;
                     }
 
-                    tierRewards.add(new RewardItem(material, chance, minAmount, maxAmount));
+                    List<EnchantmentData> enchantments = new ArrayList<>();
+                    // Corrected enchantment parsing using getMapList()
+                    if (rewardsSection.isList(itemKey + ".enchantments")) {
+                        if (isEnchantable(material)) {
+                            List<Map<?, ?>> enchList = rewardsSection.getMapList(itemKey + ".enchantments");
+                            if (!enchList.isEmpty()) {
+                                for (Map<?, ?> enchEntry : enchList) {
+                                    String enchantmentName = null;
+                                    if (enchEntry.get("name") instanceof String) {
+                                        enchantmentName = (String) enchEntry.get("name");
+                                    }
+                                    int enchantmentLevel = 1; // Default level
+                                    if (enchEntry.get("level") instanceof Number) {
+                                        enchantmentLevel = ((Number) enchEntry.get("level")).intValue();
+                                    }
+
+                                    if (enchantmentName != null) {
+                                        @SuppressWarnings("deprecation")
+                                        Enchantment bukkitEnchantment = Enchantment.getByKey(NamespacedKey.minecraft(enchantmentName.toLowerCase()));
+                                        if (bukkitEnchantment != null) {
+                                            enchantments.add(new EnchantmentData(bukkitEnchantment, enchantmentLevel));
+                                        } else {
+                                            plugin.getLogger().warning("Invalid enchantment name: " + enchantmentName + " for item " + itemKey + " in tier " + tierKey);
+                                        }
+                                    } else {
+                                        plugin.getLogger().warning("Missing enchantment name for an entry in item " + itemKey + " in tier " + tierKey);
+                                    }
+                                }
+                            }
+                        } else {
+                            plugin.getLogger().warning("Item " + itemKey + " (material: " + material.name() + ") in tier " + tierKey + " is not enchantable but has an enchantments list. Enchantments will be ignored.");
+                        }
+                    } else if (rewardsSection.contains(itemKey + ".enchantments")) {
+                        // Log a warning if enchantments section exists but is not a list (e.g. if it was a map by mistake)
+                        plugin.getLogger().warning("The 'enchantments' section for " + itemKey + " in tier " + tierKey + " is not formatted as a list. Please check your rewards.yml. Enchantments will be ignored for this item.");
+                    }
+
+                    tierRewards.add(new RewardItem(material, chance, minAmount, maxAmount, enchantments));
                     tierTotalChanceWeight += chance;
                 } catch (Exception e) {
                     plugin.getLogger().log(Level.WARNING, "Error parsing reward item: " + itemKey + " for tier " + tierKey, e);
@@ -159,10 +211,54 @@ public class RewardGenerator {
 
             if (selectedReward != null) {
                 int amount = random.nextInt((selectedReward.maxAmount - selectedReward.minAmount) + 1) + selectedReward.minAmount;
-                generatedItems.add(new ItemStack(selectedReward.material, amount));
+                ItemStack itemStack = new ItemStack(selectedReward.material, amount);
+
+                if (!selectedReward.enchantments.isEmpty()) {
+                    ItemMeta meta = itemStack.getItemMeta();
+                    if (meta != null) {
+                        if (itemStack.getType() == Material.BOOK && amount == 1) { // Only enchant books if amount is 1, standard behavior for enchanted books
+                            EnchantmentStorageMeta bookMeta = (EnchantmentStorageMeta) meta;
+                            for (EnchantmentData enchData : selectedReward.enchantments) {
+                                bookMeta.addStoredEnchant(enchData.enchantment, enchData.level, true);
+                            }
+                            itemStack.setItemMeta(bookMeta);
+                        } else if (itemStack.getType() != Material.BOOK) { // For non-book items
+                            for (EnchantmentData enchData : selectedReward.enchantments) {
+                                meta.addEnchant(enchData.enchantment, enchData.level, true);
+                            }
+                            itemStack.setItemMeta(meta);
+                        }
+                        // If it's a book but amount > 1, or some other non-enchantable scenario with meta, enchantments are not applied.
+                    }
+                }
+                generatedItems.add(itemStack);
             }
         }
         return generatedItems;
+    }
+
+    private boolean isEnchantable(Material material) {
+        if (material == null) return false;
+        // Books can hold stored enchantments
+        if (material == Material.BOOK) return true;
+        // Check for tools (pickaxes, axes, shovels, hoes, shears, flint and steel, fishing rod, carrot on a stick, warped fungus on a stick)
+        if (material.name().endsWith("_PICKAXE") || material.name().endsWith("_AXE") || material.name().endsWith("_SHOVEL") || material.name().endsWith("_HOE") ||
+            material == Material.SHEARS || material == Material.FLINT_AND_STEEL || material == Material.FISHING_ROD ||
+            material == Material.CARROT_ON_A_STICK || material == Material.WARPED_FUNGUS_ON_A_STICK) {
+            return true;
+        }
+        // Check for weapons (swords, bows, crossbow, trident)
+        if (material.name().endsWith("_SWORD") || material == Material.BOW || material == Material.CROSSBOW || material == Material.TRIDENT) {
+            return true;
+        }
+        // Check for armor (helmets, chestplates, leggings, boots, elytra, turtle shell)
+        if (material.name().endsWith("_HELMET") || material.name().endsWith("_CHESTPLATE") || material.name().endsWith("_LEGGINGS") || material.name().endsWith("_BOOTS") ||
+            material == Material.ELYTRA || material == Material.TURTLE_HELMET) {
+            return true;
+        }
+        // Add any other specific items that are enchantable but don't fit general categories
+        // e.g. Shield, Trident
+        return material == Material.SHIELD;
     }
 
     // Inner class to hold reward item details
@@ -171,12 +267,14 @@ public class RewardGenerator {
         int chance; // Relative weight
         int minAmount;
         int maxAmount;
+        List<EnchantmentData> enchantments;
 
-        RewardItem(Material material, int chance, int minAmount, int maxAmount) {
+        RewardItem(Material material, int chance, int minAmount, int maxAmount, List<EnchantmentData> enchantments) {
             this.material = material;
             this.chance = chance;
             this.minAmount = minAmount;
             this.maxAmount = maxAmount;
+            this.enchantments = enchantments != null ? enchantments : new ArrayList<>();
         }
     }
 }
