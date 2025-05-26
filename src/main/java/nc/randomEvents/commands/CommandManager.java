@@ -27,6 +27,7 @@ public class CommandManager implements CommandExecutor, TabCompleter {
         registerSubCommand("Start", new StartEventCommand(plugin, eventManager));
         registerSubCommand("AddWorld", new AddWorldCommand(plugin));
         registerSubCommand("RemoveWorld", new RemoveWorldCommand(plugin));
+        registerSubCommand("Reload", new ReloadCommand(plugin));
    
 
         // Register the main command and its alias with Bukkit

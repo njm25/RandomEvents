@@ -65,6 +65,10 @@ public class RewardGenerator {
         loadRewards();
     }
 
+    public void reloadRewards() {
+        loadRewards();
+    }
+
     private void loadRewards() {
         rewardsConfig = YamlConfiguration.loadConfiguration(rewardsFile);
         if (rewardsConfig.getKeys(false).isEmpty()) {
