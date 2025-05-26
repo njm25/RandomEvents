@@ -260,6 +260,11 @@ public class RewardGenerator {
             material == Material.ELYTRA || material == Material.TURTLE_HELMET) {
             return true;
         }
+
+        // Check for enchanted book
+        if (material == Material.ENCHANTED_BOOK) {
+            return true;
+        }
         // Add any other specific items that are enchantable but don't fit general categories
         // e.g. Shield, Trident
         return material == Material.SHIELD;

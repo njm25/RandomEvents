@@ -2,39 +2,669 @@ tiers:
   BASIC:
     rewards:
       APPLE:
-        chance: 60.0
-        minAmount: 2
-        maxAmount: 5
-      BREAD:
-        chance: 40.0
+        chance: 2.0
         minAmount: 1
         maxAmount: 3
+      BREAD:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 2
+      CARROT:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 4
+      POTATO:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 4
+      BEETROOT:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 4
+      COAL:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 4
+      STICK:
+        chance: 2.0
+        minAmount: 2
+        maxAmount: 6
+      OAK_LOG:
+        chance: 2.0
+        minAmount: 2
+        maxAmount: 4
+      SPRUCE_LOG:
+        chance: 2.0
+        minAmount: 2
+        maxAmount: 4
+      BIRCH_LOG:
+        chance: 2.0
+        minAmount: 2
+        maxAmount: 4
+      COBBLESTONE:
+        chance: 2.0
+        minAmount: 2
+        maxAmount: 6
+      DIRT:
+        chance: 2.0
+        minAmount: 3
+        maxAmount: 8
+      GRAVEL:
+        chance: 2.0
+        minAmount: 2
+        maxAmount: 6
+      SAND:
+        chance: 2.0
+        minAmount: 3
+        maxAmount: 8
+      STONE:
+        chance: 2.0
+        minAmount: 2
+        maxAmount: 6
+      OAK_PLANKS:
+        chance: 2.0
+        minAmount: 4
+        maxAmount: 8
+      TORCH:
+        chance: 2.0
+        minAmount: 4
+        maxAmount: 12
+      LADDER:
+        chance: 2.0
+        minAmount: 2
+        maxAmount: 6
+      OAK_SAPLING:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 2
+      SPRUCE_SAPLING:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 2
+      BIRCH_SAPLING:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 2
+      ACACIA_SAPLING:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 2
+      DARK_OAK_SAPLING:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 2
+      JUNGLE_SAPLING:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 2
+      PUMPKIN_SEEDS:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 4
+      MELON_SEEDS:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 4
+      WHEAT_SEEDS:
+        chance: 2.0
+        minAmount: 2
+        maxAmount: 6
+      SUGAR_CANE:
+        chance: 2.0
+        minAmount: 2
+        maxAmount: 6
+      LEATHER:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 3
+      FEATHER:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 4
+      BONE:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 4
+      STRING:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 4
+      FLINT:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 3
+      ROTTEN_FLESH:
+        chance: 2.0
+        minAmount: 2
+        maxAmount: 6
+      WOODEN_PICKAXE:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 1
+      WOODEN_AXE:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 1
+      WOODEN_SHOVEL:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 1
+      WOODEN_SWORD:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 1
+      WOODEN_HOE:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 1
+      CHICKEN:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 3
+      STONE_PICKAXE:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+      STONE_AXE:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+      STONE_SHOVEL:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+      STONE_SWORD:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+      BUCKET:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+      SHEARS:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+      FLINT_AND_STEEL:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+      COOKED_BEEF:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 3
+      COOKED_PORKCHOP:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 3
+      CHARCOAL:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 4
+      RAW_IRON:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 2
+      RAW_COPPER:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 3
+      IRON_NUGGET:
+        chance: 1.0
+        minAmount: 2
+        maxAmount: 6
+      GOLD_NUGGET:
+        chance: 1.0
+        minAmount: 2
+        maxAmount: 4
+      ARROW:
+        chance: 1.0
+        minAmount: 4
+        maxAmount: 12
+      PAPER:
+        chance: 1.0
+        minAmount: 3
+        maxAmount: 8
+      COMPASS:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+      MAP:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+      GOLDEN_APPLE:
+        chance: 1.5
+        minAmount: 1
+        maxAmount: 1
+      DIAMOND:
+        chance: 0.5
+        minAmount: 1
+        maxAmount: 1
   COMMON:
     rewards:
       IRON_INGOT:
-        chance: 50.0
-        minAmount: 3
-        maxAmount: 7
+        chance: 9.0
+        minAmount: 10
+        maxAmount: 20
+      POLISHED_ANDESITE:
+        chance: 5.0
+        minAmount: 32
+        maxAmount: 64
+      POLISHED_DIORITE:
+        chance: 4.0
+        minAmount: 32
+        maxAmount: 64
+      POLISHED_GRANITE:
+        chance: 4.0
+        minAmount: 32
+        maxAmount: 64
+      COBBLESTONE:
+        chance: 3.0
+        minAmount: 32
+        maxAmount: 64
+      DEEPSLATE:
+        chance: 3.0
+        minAmount: 32
+        maxAmount: 64
+      LAPIS_LAZULI:
+        chance: 3.0
+        minAmount: 8
+        maxAmount: 16
+      REDSTONE:
+        chance: 3.0
+        minAmount: 16
+        maxAmount: 32
+      IRON_PICKAXE:
+        chance: 3.0
+        minAmount: 1
+        maxAmount: 1
+      IRON_AXE:
+        chance: 3.0
+        minAmount: 1
+        maxAmount: 1
+      IRON_SHOVEL:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 1
+      IRON_SWORD:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 1
+      IRON_HELMET:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 1
+      IRON_CHESTPLATE:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 1
+      IRON_LEGGINGS:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 1
+      IRON_BOOTS:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 1
+      BOW:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 1
+      ARROW:
+        chance: 2.0
+        minAmount: 16
+        maxAmount: 32
+      COAL_BLOCK:
+        chance: 2.0
+        minAmount: 4
+        maxAmount: 8
       GOLD_INGOT:
-        chance: 50.0
+        chance: 2.0
+        minAmount: 4
+        maxAmount: 8
+      SHIELD:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+      BUCKET:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+      WATER_BUCKET:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+      LAVA_BUCKET:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+      MINECART:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+      RAIL:
+        chance: 1.0
+        minAmount: 16
+        maxAmount: 32
+      POWERED_RAIL:
+        chance: 1.0
+        minAmount: 4
+        maxAmount: 8
+      OBSIDIAN:
+        chance: 1.0
+        minAmount: 4
+        maxAmount: 8
+      BOOKSHELF:
+        chance: 1.0
         minAmount: 1
         maxAmount: 3
+      BOOK:
+        chance: 1.0
+        minAmount: 3
+        maxAmount: 6
+      ENCHANTED_BOOK:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+        enchantments:
+          - name: efficiency
+            level: 1
+      LAPIS_BLOCK:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 3
+      REDSTONE_BLOCK:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 3
+      COAL:
+        chance: 1.0
+        minAmount: 8
+        maxAmount: 16
+      GOLD_NUGGET:
+        chance: 1.0
+        minAmount: 8
+        maxAmount: 16
+      IRON_NUGGET:
+        chance: 1.0
+        minAmount: 8
+        maxAmount: 16
+      ARMOR_STAND:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 2
+      LANTERN:
+        chance: 1.0
+        minAmount: 2
+        maxAmount: 6
+      CAMPFIRE:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 2
+      COOKED_MUTTON:
+        chance: 1.0
+        minAmount: 4
+        maxAmount: 8
+      COOKED_CHICKEN:
+        chance: 1.0
+        minAmount: 4
+        maxAmount: 8
+      COOKED_SALMON:
+        chance: 1.0
+        minAmount: 4
+        maxAmount: 8
+      DRIED_KELP_BLOCK:
+        chance: 1.0
+        minAmount: 4
+        maxAmount: 8
+      HONEY_BOTTLE:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 3
+      HONEYCOMB:
+        chance: 1.0
+        minAmount: 3
+        maxAmount: 6
+      SADDLE:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+      LEAD:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 2
+      NAME_TAG:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+      MUSIC_DISC_CAT:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+      GLOWSTONE_DUST:
+        chance: 1.0
+        minAmount: 4
+        maxAmount: 8
+      AMETHYST_SHARD:
+        chance: 1.0
+        minAmount: 4
+        maxAmount: 8
+      COPPER_INGOT:
+        chance: 1.0
+        minAmount: 8
+        maxAmount: 16
+      RAW_GOLD:
+        chance: 1.0
+        minAmount: 4
+        maxAmount: 8
+      RAW_IRON:
+        chance: 1.0
+        minAmount: 4
+        maxAmount: 8
+      GUNPOWDER:
+        chance: 1.0
+        minAmount: 4
+        maxAmount: 8
+      LIGHTNING_ROD:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 2
+      BRICKS:
+        chance: 1.0
+        minAmount: 16
+        maxAmount: 32
+      STONECUTTER:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+      DIAMOND:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 2
+      DIAMOND_PICKAXE:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+        enchantments:
+          - name: efficiency
+            level: 2
   RARE:
     rewards:
+      DIAMOND:
+        chance: 12.0
+        minAmount: 10
+        maxAmount: 16
+      NETHERITE_INGOT:
+        chance: 9.0
+        minAmount: 1
+        maxAmount: 1
+      DIAMOND_PICKAXE:
+        chance: 7.0
+        minAmount: 1
+        maxAmount: 1
+        enchantments:
+          - name: efficiency
+            level: 4
+          - name: unbreaking
+            level: 3
       DIAMOND_SWORD:
-        chance: 30.0
+        chance: 7.0
         minAmount: 1
         maxAmount: 1
         enchantments:
           - name: sharpness
-            level: 2
-          - name: knockback
+            level: 4
+          - name: unbreaking
+            level: 3
+      DIAMOND_AXE:
+        chance: 4.0
+        minAmount: 1
+        maxAmount: 1
+        enchantments:
+          - name: efficiency
+            level: 4
+          - name: unbreaking
+            level: 3
+      DIAMOND_HELMET:
+        chance: 4.0
+        minAmount: 1
+        maxAmount: 1
+        enchantments:
+          - name: protection
+            level: 3
+          - name: unbreaking
+            level: 3
+      DIAMOND_CHESTPLATE:
+        chance: 4.0
+        minAmount: 1
+        maxAmount: 1
+        enchantments:
+          - name: protection
+            level: 3
+          - name: unbreaking
+            level: 3
+      DIAMOND_LEGGINGS:
+        chance: 4.0
+        minAmount: 1
+        maxAmount: 1
+        enchantments:
+          - name: protection
+            level: 3
+          - name: unbreaking
+            level: 3
+      DIAMOND_BOOTS:
+        chance: 4.0
+        minAmount: 1
+        maxAmount: 1
+        enchantments:
+          - name: feather_falling
+            level: 4
+          - name: unbreaking
+            level: 3
+      CROSSBOW:
+        chance: 3.0
+        minAmount: 1
+        maxAmount: 1
+        enchantments:
+          - name: quick_charge
+            level: 3
+          - name: piercing
+            level: 4
+      ENCHANTED_BOOK:        # single Mending book
+        chance: 4.0
+        minAmount: 1
+        maxAmount: 1
+        enchantments:
+          - name: mending
             level: 1
-      DIAMOND:
-        chance: 40.0
+      ELYTRA:
+        chance: 3.0
+        minAmount: 1
+        maxAmount: 1
+      TOTEM_OF_UNDYING:
+        chance: 4.0
         minAmount: 1
         maxAmount: 2
-      EMERALD:
-        chance: 30.0
+      SHULKER_SHELL:
+        chance: 3.0
+        minAmount: 2
+        maxAmount: 4
+      HEART_OF_THE_SEA:
+        chance: 3.0
         minAmount: 1
-        maxAmount: 1 
+        maxAmount: 1
+      ENDER_PEARL:
+        chance: 2.0
+        minAmount: 8
+        maxAmount: 16
+      ANCIENT_DEBRIS:
+        chance: 2.0
+        minAmount: 1
+        maxAmount: 3
+      ENCHANTED_GOLDEN_APPLE:
+        chance: 1.5
+        minAmount: 1
+        maxAmount: 1
+      NETHER_STAR:
+        chance: 1.5
+        minAmount: 1
+        maxAmount: 1
+      TRIDENT:
+        chance: 1.5
+        minAmount: 1
+        maxAmount: 1
+      SHIELD:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+        enchantments:
+          - name: unbreaking
+            level: 3
+          - name: mending
+            level: 1
+      DRAGON_HEAD:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+      BEACON:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+      FIREWORK_ROCKET:
+        chance: 1.5
+        minAmount: 32
+        maxAmount: 64
+      NETHERITE_SWORD:
+        chance: 1.0
+        minAmount: 1
+        maxAmount: 1
+        enchantments:
+          - name: sharpness
+            level: 5
+          - name: looting
+            level: 3
+          - name: unbreaking
+            level: 3
+          - name: mending
+            level: 1
+      DIAMOND_BLOCK:
+        chance: 3.0
+        minAmount: 1
+        maxAmount: 2
+      NETHERITE_SCRAP:
+        chance: 3.0
+        minAmount: 1
+        maxAmount: 3
+      BLAZE_ROD:
+        chance: 2.0
+        minAmount: 4
+        maxAmount: 8
+      GOLDEN_CARROT:
+        chance: 2.0
+        minAmount: 8
+        maxAmount: 16
+      PHANTOM_MEMBRANE:
+        chance: 1.0
+        minAmount: 2
+        maxAmount: 5
