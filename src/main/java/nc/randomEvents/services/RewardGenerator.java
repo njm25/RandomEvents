@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.logging.Level;
+import java.util.HashMap;
 
 public class RewardGenerator {
     private final RandomEvents plugin;
@@ -42,6 +43,28 @@ public class RewardGenerator {
             } catch (IllegalArgumentException e) {
                 return null; // Or throw an exception, or return a default
             }
+        }
+    }
+
+    /**
+     * Helper class to build tier-quantity mappings easily
+     */
+    public static class TierQuantity {
+        private final Map<Tier, Integer> quantities;
+
+        public TierQuantity() {
+            this.quantities = new HashMap<>();
+        }
+
+        public TierQuantity add(Tier tier, int quantity) {
+            if (quantity > 0) {
+                quantities.put(tier, quantity);
+            }
+            return this;
+        }
+
+        public Map<Tier, Integer> build() {
+            return new HashMap<>(quantities);
         }
     }
 
@@ -272,6 +295,26 @@ public class RewardGenerator {
         // Add any other specific items that are enchantable but don't fit general categories
         // e.g. Shield, Trident
         return material == Material.SHIELD;
+    }
+
+    /**
+     * Generates rewards based on a map of tiers and their quantities
+     * @param tierQuantities Map of Tier to number of items to generate for that tier
+     * @return List of all generated ItemStacks
+     */
+    public List<ItemStack> generateRewards(Map<Tier, Integer> tierQuantities) {
+        List<ItemStack> allGeneratedItems = new ArrayList<>();
+        
+        for (Map.Entry<Tier, Integer> entry : tierQuantities.entrySet()) {
+            Tier tier = entry.getKey();
+            int quantity = entry.getValue();
+            
+            if (quantity > 0) {
+                allGeneratedItems.addAll(generateRewards(tier, quantity));
+            }
+        }
+        
+        return allGeneratedItems;
     }
 
     // Inner class to hold reward item details

@@ -2,6 +2,8 @@ package nc.randomEvents.services.events;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.services.RewardGenerator;
+import nc.randomEvents.services.RewardGenerator.Tier;
+import nc.randomEvents.services.RewardGenerator.TierQuantity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
@@ -202,7 +204,13 @@ public class QuestEvent implements Event, Listener {
 
             RewardGenerator rewardGenerator = plugin.getRewardGenerator();
             if (rewardGenerator != null) {
-                List<ItemStack> rewards = rewardGenerator.generateRewards(RewardGenerator.Tier.RARE, 2); // "a couple" of RARE rewards
+                List<ItemStack> rewards = rewardGenerator.generateRewards(
+                    new TierQuantity()
+                        .add(Tier.RARE, 2)
+                        .add(Tier.COMMON, 4)
+                        .build()
+                );
+
                 if (rewards.isEmpty()) {
                     winner.sendMessage(Component.text("The chest was surprisingly empty... better luck next time!", NamedTextColor.YELLOW));
                     plugin.getLogger().warning("QuestEvent: No RARE rewards generated for winner " + winner.getName());

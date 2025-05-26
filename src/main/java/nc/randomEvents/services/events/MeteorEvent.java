@@ -2,6 +2,9 @@ package nc.randomEvents.services.events;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.services.RewardGenerator;
+import nc.randomEvents.services.RewardGenerator.Tier;
+import nc.randomEvents.services.RewardGenerator.TierQuantity;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Particle;
@@ -106,8 +109,14 @@ public class MeteorEvent implements Event, Listener {
             double rewardDropChance = 0.40; // 40% chance to drop rewards
             if (random.nextDouble() < rewardDropChance) {
                 int numberOfItemStacks = random.nextInt(2) + 1; // 1 or 2 different item types
-                List<ItemStack> rewards = rewardGenerator.generateRewards(RewardGenerator.Tier.COMMON, numberOfItemStacks);
-
+                int numberOfItemStacks1 = random.nextInt(2) + 1; // 1 or 2 different item types
+                List<ItemStack> rewards = rewardGenerator.generateRewards(
+                    new TierQuantity()
+                        .add(Tier.COMMON, numberOfItemStacks)
+                        .add(Tier.BASIC, numberOfItemStacks1)
+                        .build()
+                );
+                
                 if (!rewards.isEmpty()) {
                     for (ItemStack itemStack : rewards) {
                         fireball.getWorld().dropItemNaturally(impactLocation, itemStack);
