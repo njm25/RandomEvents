@@ -9,6 +9,7 @@ import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
+import org.bukkit.block.Container;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.HandlerList;
@@ -16,6 +17,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.meta.BookMeta;
 
 import java.util.ArrayList;
@@ -231,12 +233,57 @@ public class QuestEvent implements Event, Listener {
             for (UUID playerUUID : participatingPlayerUUIDs) {
                 Player player = Bukkit.getPlayer(playerUUID);
                 if (player != null && player.isOnline()) {
+                    // Clean up from player inventory
                     for (ItemStack item : player.getInventory().getContents()) {
                         if (item != null && item.getType() == Material.WRITTEN_BOOK) {
                             BookMeta meta = (BookMeta) item.getItemMeta();
                             if (meta != null && meta.getTitle() != null && 
                                 Component.text("Ancient Scroll", NamedTextColor.GOLD).equals(meta.title())) {
                                 player.getInventory().remove(item);
+                            }
+                        }
+                    }
+
+                    // Clean up from ground and containers near each player
+                    World world = player.getWorld();
+                    Location playerLoc = player.getLocation();
+                    int radius = 50; // Search within 50 blocks
+
+                    // Clean up dropped items
+                    world.getEntitiesByClass(org.bukkit.entity.Item.class).stream()
+                        .filter(item -> item.getLocation().distance(playerLoc) <= radius)
+                        .forEach(item -> {
+                            ItemStack droppedItem = item.getItemStack();
+                            if (droppedItem.getType() == Material.WRITTEN_BOOK) {
+                                BookMeta meta = (BookMeta) droppedItem.getItemMeta();
+                                if (meta != null && meta.getTitle() != null &&
+                                    Component.text("Ancient Scroll", NamedTextColor.GOLD).equals(meta.title())) {
+                                    item.remove();
+                                }
+                            }
+                        });
+
+                    // Clean up from nearby containers
+                    for (int x = -radius; x <= radius; x++) {
+                        for (int y = -radius; y <= radius; y++) {
+                            for (int z = -radius; z <= radius; z++) {
+                                Location loc = playerLoc.clone().add(x, y, z);
+                                if (loc.distance(playerLoc) <= radius) {
+                                    Block block = loc.getBlock();
+                                    if (block.getState() instanceof Container) {
+                                        Container container = (Container) block.getState();
+                                        Inventory inv = container.getInventory();
+                                        for (ItemStack item : inv.getContents()) {
+                                            if (item != null && item.getType() == Material.WRITTEN_BOOK) {
+                                                BookMeta meta = (BookMeta) item.getItemMeta();
+                                                if (meta != null && meta.getTitle() != null &&
+                                                    Component.text("Ancient Scroll", NamedTextColor.GOLD).equals(meta.title())) {
+                                                    inv.remove(item);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
