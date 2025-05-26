@@ -2,27 +2,27 @@ tiers:
   BASIC:
     rewards:
       APPLE:
-        chance: 60
+        chance: 60.0
         minAmount: 2
         maxAmount: 5
       BREAD:
-        chance: 40
+        chance: 40.0
         minAmount: 1
         maxAmount: 3
   COMMON:
     rewards:
       IRON_INGOT:
-        chance: 50
+        chance: 50.0
         minAmount: 3
         maxAmount: 7
       GOLD_INGOT:
-        chance: 50
+        chance: 50.0
         minAmount: 1
         maxAmount: 3
   RARE:
     rewards:
       DIAMOND_SWORD:
-        chance: 30
+        chance: 30.0
         minAmount: 1
         maxAmount: 1
         enchantments:
@@ -31,10 +31,10 @@ tiers:
           - name: knockback
             level: 1
       DIAMOND:
-        chance: 40
+        chance: 40.0
         minAmount: 1
         maxAmount: 2
       EMERALD:
-        chance: 60 # Higher chance within RARE tier, but RARE tier itself might be chosen less often
+        chance: 30.0
         minAmount: 1
         maxAmount: 1 

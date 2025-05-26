@@ -31,7 +31,7 @@ public class RewardGenerator {
     // private int totalChanceWeight = 0;
 
     private final Map<Tier, List<RewardItem>> possibleRewardsByTier = new EnumMap<>(Tier.class);
-    private final Map<Tier, Integer> totalChanceWeightByTier = new EnumMap<>(Tier.class);
+    private final Map<Tier, Double> totalChanceWeightByTier = new EnumMap<>(Tier.class);
 
     public enum Tier {
         BASIC, COMMON, RARE;
@@ -110,7 +110,7 @@ public class RewardGenerator {
             }
 
             List<RewardItem> tierRewards = new ArrayList<>();
-            int tierTotalChanceWeight = 0;
+            double tierTotalChanceWeight = 0.0;
             Set<String> itemKeys = rewardsSection.getKeys(false);
 
             for (String itemKey : itemKeys) {
@@ -120,12 +120,12 @@ public class RewardGenerator {
                         plugin.getLogger().warning("Invalid material in rewards.yml for tier " + tierKey + ": " + itemKey);
                         continue;
                     }
-                    int chance = rewardsSection.getInt(itemKey + ".chance", 1);
+                    double chance = rewardsSection.getDouble(itemKey + ".chance", 1.0);
                     int minAmount = rewardsSection.getInt(itemKey + ".minAmount", 1);
                     int maxAmount = rewardsSection.getInt(itemKey + ".maxAmount", 1);
 
-                    if (minAmount <= 0 || maxAmount < minAmount || chance <= 0) {
-                        plugin.getLogger().warning("Invalid amount/chance for " + itemKey + " in tier " + tierKey + " in rewards.yml. Skipping.");
+                    if (minAmount <= 0 || maxAmount < minAmount || chance <= 0 || chance > 100) {
+                        plugin.getLogger().warning("Invalid amount/chance for " + itemKey + " in tier " + tierKey + " in rewards.yml. Chance must be between 0 and 100, amounts must be positive. Skipping.");
                         continue;
                     }
 
@@ -174,9 +174,13 @@ public class RewardGenerator {
             }
 
             if (!tierRewards.isEmpty()) {
+                // Validate total percentage is approximately 100%
+                if (Math.abs(tierTotalChanceWeight - 100.0) > 0.01) {
+                    plugin.getLogger().warning("Total chance weight for tier " + currentTier + " is " + tierTotalChanceWeight + "%. It should sum to 100%.");
+                }
                 possibleRewardsByTier.put(currentTier, tierRewards);
                 totalChanceWeightByTier.put(currentTier, tierTotalChanceWeight);
-                plugin.getLogger().info("Loaded " + tierRewards.size() + " rewards for tier " + currentTier + " with total chance weight " + tierTotalChanceWeight);
+                plugin.getLogger().info("Loaded " + tierRewards.size() + " rewards for tier " + currentTier + " with total chance weight " + String.format("%.2f%%", tierTotalChanceWeight));
             } else {
                 plugin.getLogger().warning("No valid rewards loaded for tier " + currentTier + " from rewards.yml.");
             }
@@ -189,7 +193,7 @@ public class RewardGenerator {
     public List<ItemStack> generateRewards(Tier tier, int numberOfItemStacksToGenerate) {
         List<ItemStack> generatedItems = new ArrayList<>();
         List<RewardItem> rewardsForTier = possibleRewardsByTier.get(tier);
-        Integer tierTotalChanceWeight = totalChanceWeightByTier.get(tier);
+        Double tierTotalChanceWeight = totalChanceWeightByTier.get(tier);
 
         if (rewardsForTier == null || rewardsForTier.isEmpty() || tierTotalChanceWeight == null || tierTotalChanceWeight <= 0) {
             plugin.getLogger().warning("Cannot generate rewards for tier " + tier + ": No rewards loaded or total chance weight is zero for this tier.");
@@ -197,13 +201,13 @@ public class RewardGenerator {
         }
 
         for (int i = 0; i < numberOfItemStacksToGenerate; i++) {
-            int pickedChance = random.nextInt(tierTotalChanceWeight);
-            int currentWeight = 0;
+            double roll = random.nextDouble() * 100.0; // Roll between 0 and 100
+            double currentSum = 0.0;
             RewardItem selectedReward = null;
 
             for (RewardItem reward : rewardsForTier) {
-                currentWeight += reward.chance;
-                if (pickedChance < currentWeight) {
+                currentSum += reward.chance;
+                if (roll < currentSum) {
                     selectedReward = reward;
                     break;
                 }
@@ -264,12 +268,12 @@ public class RewardGenerator {
     // Inner class to hold reward item details
     private static class RewardItem {
         Material material;
-        int chance; // Relative weight
+        double chance; // Percentage chance (0-100)
         int minAmount;
         int maxAmount;
         List<EnchantmentData> enchantments;
 
-        RewardItem(Material material, int chance, int minAmount, int maxAmount, List<EnchantmentData> enchantments) {
+        RewardItem(Material material, double chance, int minAmount, int maxAmount, List<EnchantmentData> enchantments) {
             this.material = material;
             this.chance = chance;
             this.minAmount = minAmount;
