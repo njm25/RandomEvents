@@ -51,7 +51,7 @@ public class MeteorEvent implements Event, Listener {
                 .append(Component.text("Look up! Meteors are incoming!", NamedTextColor.YELLOW)));
 
             new BukkitRunnable() {
-                int meteorsToSpawn = random.nextInt(6) + 7; // 7-12 meteors per player
+                int meteorsToSpawn = random.nextInt(10) + 15; // Increased from 7-12 to 15-24 meteors per player
                 int meteorsSpawned = 0;
 
                 @Override
@@ -71,8 +71,8 @@ public class MeteorEvent implements Event, Listener {
         Location playerLoc = player.getLocation();
         World world = player.getWorld();
 
-        double offsetX = (random.nextDouble() - 0.5) * 40; // -20 to +20 block horizontal radius
-        double offsetZ = (random.nextDouble() - 0.5) * 40;
+        double offsetX = (random.nextDouble() - 0.5) * 160; // Increased radius from -20 to +20 to -80 to +80
+        double offsetZ = (random.nextDouble() - 0.5) * 160; // Increased radius
         double spawnY = Math.min(world.getMaxHeight() - 5, playerLoc.getY() + 60 + random.nextInt(40));
 
         Location meteorSpawnLoc = new Location(world, playerLoc.getX() + offsetX, spawnY, playerLoc.getZ() + offsetZ);
@@ -80,7 +80,7 @@ public class MeteorEvent implements Event, Listener {
         Fireball fireball = world.spawn(meteorSpawnLoc, Fireball.class);
         Vector direction = new Vector((random.nextDouble() - 0.5) * 0.2, -1.0, (random.nextDouble() - 0.5) * 0.2);
         fireball.setDirection(direction.normalize());
-        fireball.setYield(1.0F);           // Small explosion (affects ~1-2 blocks)
+        fireball.setYield(0.0F);           // Small explosion (affects ~1-2 blocks)
         fireball.setIsIncendiary(false);   // Prevent fire
         fireball.setShooter(null);
         fireball.setMetadata(METEOR_METADATA_KEY, new FixedMetadataValue(plugin, true));

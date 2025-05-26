@@ -2,20 +2,18 @@ package nc.randomEvents.services.events;
 
 import nc.randomEvents.RandomEvents;
 import org.bukkit.*;
-import org.bukkit.attribute.Attribute;
-import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
 import org.bukkit.block.Chest;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Zombie;
+import org.bukkit.entity.PigZombie;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityCombustEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
@@ -33,18 +31,12 @@ public class LootGoblinEvent implements Event, Listener {
     private final Random random = new Random();
     private static final String LOOT_GOBLIN_METADATA_KEY = "loot_goblin";
     private static final String STOLEN_ITEM_METADATA_KEY = "loot_goblin_stolen_item";
-    private static final String AGGRO_SWORD_METADATA_KEY = "loot_goblin_aggro_sword";
     private static final String CRYING_METADATA_KEY = "loot_goblin_crying";
     private final NamespacedKey goblinUniqueIdKey;
 
     private final Map<UUID, GoblinTask> activeGoblins = new ConcurrentHashMap<>(); // Zombie UUID to its task
     private static final int CHEST_SEARCH_RADIUS = 20;
     private static final int FLEE_TIMEOUT_SECONDS = 60;
-    private static final double GOBLIN_SPEED_MULTIPLIER = 1.0;
-    private static final int GOBLIN_SPAWN_MIN_RADIUS = 10;
-    private static final int GOBLIN_SPAWN_MAX_RADIUS = 20;
-    private static final int FLEE_RADIUS = 25;
-    private static final int MIN_FLEE_DISTANCE = 10;
 
     public LootGoblinEvent(RandomEvents plugin) {
         this.plugin = plugin;
@@ -73,25 +65,60 @@ public class LootGoblinEvent implements Event, Listener {
     private void spawnGoblinForPlayer(Player player) {
         Location playerLoc = player.getLocation();
         World world = player.getWorld();
-        Location spawnLoc = findSafeSpawnLocation(playerLoc, GOBLIN_SPAWN_MIN_RADIUS, GOBLIN_SPAWN_MAX_RADIUS);
+        Location spawnLoc = null;
+
+        Vector direction = playerLoc.getDirection().normalize();
+        // Calculate target X, Z ~two blocks behind the player
+        double targetX = playerLoc.getX() - direction.getX() * 2.0;
+        double targetZ = playerLoc.getZ() - direction.getZ() * 2.0;
+
+        // Try to find a safe spot around the player's Y level at the target X, Z
+        // Checking player's Y, Y-1, Y-2 (for ground if player is slightly above it)
+        for (int yDelta = 0; yDelta >= -2; yDelta--) {
+            Location potentialFeetLoc = new Location(world, targetX, playerLoc.getY() + yDelta, targetZ);
+            if (isSafeToSpawn(potentialFeetLoc)) {
+                spawnLoc = new Location(world, potentialFeetLoc.getX() + 0.5, potentialFeetLoc.getY(), potentialFeetLoc.getZ() + 0.5);
+                break;
+            }
+        }
+        
+        // If not found, try one block above player's Y (e.g. if player is slightly in ground or behind is a step up)
+        if (spawnLoc == null) {
+            Location potentialFeetLoc = new Location(world, targetX, playerLoc.getY() + 1, targetZ);
+            if (isSafeToSpawn(potentialFeetLoc)) {
+                spawnLoc = new Location(world, potentialFeetLoc.getX() + 0.5, potentialFeetLoc.getY(), potentialFeetLoc.getZ() + 0.5);
+            }
+        }
 
         if (spawnLoc == null) {
-            plugin.getLogger().warning("Could not find a safe spawn location for Loot Goblin near " + player.getName());
+            plugin.getLogger().warning("LootGoblinEvent: Could not find a safe spawn location behind " + player.getName() + ". Goblin will not spawn.");
             return;
         }
 
-        Zombie goblin = (Zombie) world.spawnEntity(spawnLoc, EntityType.ZOMBIE);
-        goblin.setAge(-1); // -1 for baby, 0 for adult
+        PigZombie goblin = (PigZombie) world.spawnEntity(spawnLoc, EntityType.ZOMBIFIED_PIGLIN);
+        goblin.setAge(-1); // Ensure it's a baby
         goblin.customName(Component.text("Loot Goblin", NamedTextColor.GOLD));
         goblin.setCustomNameVisible(true);
+
+        // Ensure goblin starts with an empty hand
+        if (goblin.getEquipment() != null) {
+            goblin.getEquipment().setItemInMainHand(new ItemStack(Material.AIR));
+            goblin.getEquipment().setItemInMainHandDropChance(0.0f); // Prevent dropping this 'nothing'
+        }
+
         goblin.getPersistentDataContainer().set(goblinUniqueIdKey, PersistentDataType.STRING, goblin.getUniqueId().toString());
         goblin.setMetadata(LOOT_GOBLIN_METADATA_KEY, new FixedMetadataValue(plugin, true));
 
-        AttributeInstance speedAttribute = goblin.getAttribute(Attribute.MOVEMENT_SPEED);
-        if (speedAttribute != null) {
-            speedAttribute.setBaseValue(speedAttribute.getBaseValue() * GOBLIN_SPEED_MULTIPLIER);
-        }
+        // Make goblin completely passive
+        goblin.setTarget(null);
+        goblin.setCanPickupItems(false);
         goblin.setSilent(true);
+        goblin.setCanBreakDoors(true);
+
+        // Enable door opening for the pathfinder
+        if (goblin.getPathfinder() != null) {
+            goblin.getPathfinder().setCanOpenDoors(true);
+        }
 
         player.sendMessage(Component.text("You hear a faint giggle... a ", NamedTextColor.YELLOW)
             .append(Component.text("Loot Goblin", NamedTextColor.GOLD))
@@ -100,63 +127,33 @@ public class LootGoblinEvent implements Event, Listener {
 
         GoblinTask task = new GoblinTask(goblin, player);
         activeGoblins.put(goblin.getUniqueId(), task);
-        task.runTaskTimer(plugin, 0L, 5L); // Run AI tick more frequently (every 5 ticks = 0.25s)
+        task.runTaskTimer(plugin, 0L, 5L); // Run AI tick every 5 ticks (0.25s)
     }
 
-    private Location findSafeSpawnLocation(Location center, int minRadius, int maxRadius) {
-        World world = center.getWorld();
-        if (world == null) return null;
-        for (int i = 0; i < 30; i++) { // Try 30 times for a better chance in a ring
-            double angle = random.nextDouble() * 2 * Math.PI;
-            // Ensure spawning in a ring
-            double r_squared = (minRadius * minRadius) + ( (maxRadius * maxRadius) - (minRadius * minRadius) ) * random.nextDouble();
-            double r = Math.sqrt(r_squared);
+    // Helper method to check if a location is safe for a 2-block high mob
+    private boolean isSafeToSpawn(Location feetLocation) {
+        World world = feetLocation.getWorld();
+        if (world == null) return false;
 
-            double x = center.getX() + r * Math.cos(angle);
-            double z = center.getZ() + r * Math.sin(angle);
-            
-            Location loc = new Location(world, x, center.getY(), z); // Start search at player's Y level for more relevant checks
-            Location groundLoc = world.getHighestBlockAt(loc).getLocation(); // Find ground
-            // If highest block is too far below, try to find a surface closer to player's Y
-            if(Math.abs(groundLoc.getY() - center.getY()) > 10){
-                loc = new Location(world, x, center.getY(), z);
-                // Attempt to find a surface within a small vertical range around player's Y
-                boolean foundSurface = false;
-                for(int yOffset = 0; yOffset <=5; yOffset++){
-                     Block bBelow = world.getBlockAt(loc.getBlockX(), loc.getBlockY() - yOffset -1, loc.getBlockZ());
-                     Block bAt = world.getBlockAt(loc.getBlockX(), loc.getBlockY() - yOffset, loc.getBlockZ());
-                     Block bAbove = world.getBlockAt(loc.getBlockX(), loc.getBlockY() - yOffset + 1, loc.getBlockZ());
-                     if(!bBelow.isPassable() && bAt.isPassable() && bAbove.isPassable()){
-                         loc.setY(loc.getY() - yOffset);
-                         foundSurface = true;
-                         break;
-                     }
-                }
-                if(!foundSurface) continue; // No suitable surface nearby in vertical slice
-            } else {
-                loc.setY(groundLoc.getY());
-            }
-            
-            if (loc.getY() < world.getMinHeight() + 2) loc.setY(world.getMinHeight() + 2);
-            if (loc.getY() > world.getMaxHeight() -3) loc.setY(world.getMaxHeight() -3);
+        // Ensure coordinates are integers for block fetching
+        int x = feetLocation.getBlockX();
+        int y = feetLocation.getBlockY();
+        int z = feetLocation.getBlockZ();
 
-
-            if (loc.getBlock().getRelative(0, 0, 0).isPassable() &&
-                loc.getBlock().getRelative(0, 1, 0).isPassable() &&
-                !loc.getBlock().getRelative(0, -1, 0).isPassable()) {
-                return loc.add(0.5, 0, 0.5); // Center on block
-            }
+        // Check world bounds (feet location is Y, head is Y+1)
+        if (y < world.getMinHeight() || y + 1 > world.getMaxHeight()) {
+            return false;
         }
-        // Fallback if no ideal spot is found after attempts, spawn near original center but higher
-        Location fallbackLoc = center.clone().add( (random.nextDouble()-0.5) * minRadius * 2, 0 , (random.nextDouble()-0.5) * minRadius*2);
-        fallbackLoc.setY(world.getHighestBlockYAt(fallbackLoc) +1.0);
-         if (fallbackLoc.getBlock().getRelative(0, 0, 0).isPassable() &&
-             fallbackLoc.getBlock().getRelative(0, 1, 0).isPassable() &&
-             !fallbackLoc.getBlock().getRelative(0, -1, 0).isPassable()) {
-                return fallbackLoc.add(0.5,0,0.5);
-         }
-        plugin.getLogger().warning("LootGoblinEvent: Could not find a suitable safe spawn location after many attempts near " + center.toString());
-        return null; // Could not find a suitable spot
+
+        Block blockBelowFeet = world.getBlockAt(x, y - 1, z);
+        Block blockAtFeet = world.getBlockAt(x, y, z);
+        Block blockAtHead = world.getBlockAt(x, y + 1, z);
+
+        return !blockBelowFeet.isPassable() && // Solid ground
+               blockAtFeet.isPassable() &&    // Space for feet
+               blockAtHead.isPassable() &&    // Space for head
+               !blockAtFeet.isLiquid() &&     // Not in liquid at feet
+               !blockBelowFeet.isLiquid();    // Not standing on liquid source that looks solid (e.g. top of waterfall)
     }
 
     @EventHandler
@@ -170,8 +167,6 @@ public class LootGoblinEvent implements Event, Listener {
                 if (stolenItem != null && stolenItem.getType() != Material.AIR) {
                     deadEntity.getWorld().dropItemNaturally(deadEntity.getLocation(), stolenItem);
                 }
-            } else if (deadEntity.getEquipment().getItemInMainHand().getType() == Material.DIAMOND_SWORD && deadEntity.hasMetadata(AGGRO_SWORD_METADATA_KEY)) {
-                deadEntity.getWorld().dropItemNaturally(deadEntity.getLocation(), new ItemStack(Material.DIAMOND_SWORD));
             }
             // Victory sound/particle
             deadEntity.getWorld().playSound(deadEntity.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.2f);
@@ -189,73 +184,93 @@ public class LootGoblinEvent implements Event, Listener {
 
     @EventHandler
     public void onEntityDamage(EntityDamageByEntityEvent event) {
-        if (!(event.getEntity() instanceof Zombie)) return;
-        Zombie goblin = (Zombie) event.getEntity();
-        
-        if (!goblin.hasMetadata(LOOT_GOBLIN_METADATA_KEY)) return;
-        
+        if (!(event.getEntity() instanceof LivingEntity && event.getEntity().hasMetadata(LOOT_GOBLIN_METADATA_KEY))) {
+            return;
+        }
+        LivingEntity livingEntity = (LivingEntity) event.getEntity();
+        // Now we know it's our goblin, cast if PigZombie specific methods are needed,
+        // but for current logic, LivingEntity is sufficient for most parts.
+        // For consistency and future use, we can cast to PigZombie if needed.
+        // PigZombie goblin = (PigZombie) livingEntity;
+
         // Cancel the damage event - we don't want the goblin to actually take damage
         event.setCancelled(true);
-        
+
         // If already crying, ignore additional hits
-        if (goblin.hasMetadata(CRYING_METADATA_KEY)) return;
-        
+        if (livingEntity.hasMetadata(CRYING_METADATA_KEY)) return;
+
         // Mark as crying
-        goblin.setMetadata(CRYING_METADATA_KEY, new FixedMetadataValue(plugin, true));
-        
+        livingEntity.setMetadata(CRYING_METADATA_KEY, new FixedMetadataValue(plugin, true));
+
         // Drop the item if carrying one
-        if (goblin.hasMetadata(STOLEN_ITEM_METADATA_KEY)) {
-            ItemStack stolenItem = (ItemStack) goblin.getMetadata(STOLEN_ITEM_METADATA_KEY).get(0).value();
+        if (livingEntity.hasMetadata(STOLEN_ITEM_METADATA_KEY)) {
+            ItemStack stolenItem = (ItemStack) livingEntity.getMetadata(STOLEN_ITEM_METADATA_KEY).get(0).value();
             if (stolenItem != null && stolenItem.getType() != Material.AIR) {
-                goblin.getWorld().dropItemNaturally(goblin.getLocation(), stolenItem);
-                goblin.getEquipment().setItemInMainHand(new ItemStack(Material.AIR));
-                goblin.removeMetadata(STOLEN_ITEM_METADATA_KEY, plugin);
+                livingEntity.getWorld().dropItemNaturally(livingEntity.getLocation(), stolenItem);
+                if (livingEntity.getEquipment() != null) { // Null check for equipment
+                    livingEntity.getEquipment().setItemInMainHand(new ItemStack(Material.AIR));
+                }
+                livingEntity.removeMetadata(STOLEN_ITEM_METADATA_KEY, plugin);
             }
         }
-        
+
         // Play crying effects
-        Location loc = goblin.getLocation();
-        World world = goblin.getWorld();
+        Location loc = livingEntity.getLocation();
+        World world = livingEntity.getWorld();
         world.playSound(loc, Sound.ENTITY_DOLPHIN_DEATH, 1.0f, 2.0f); // High-pitched sad sound
-        world.spawnParticle(Particle.CLOUD, loc.add(0, 1.5, 0), 20, 0.2, 0.2, 0.2, 0); // Tear particles
-        
+        Location particleLoc = loc.clone().add(0, 1.5, 0);
+        world.spawnParticle(Particle.CLOUD, particleLoc.getX(), particleLoc.getY(), particleLoc.getZ(), 20, 0.2, 0.2, 0.2, 0);
+
         // Schedule disappearance after crying
         new BukkitRunnable() {
             int ticks = 0;
             @Override
             public void run() {
-                if (!goblin.isValid() || goblin.isDead()) {
+                if (!livingEntity.isValid() || livingEntity.isDead()) {
                     this.cancel();
                     return;
                 }
-                
+
                 ticks++;
                 if (ticks % 10 == 0) { // Every half second
                     // Continue crying effects
-                    world.spawnParticle(Particle.CLOUD, goblin.getLocation().add(0, 1.5, 0), 5, 0.2, 0.2, 0.2, 0);
-                    world.playSound(goblin.getLocation(), Sound.ENTITY_DOLPHIN_HURT, 0.5f, 2.0f);
+                    Location currentParticleLoc = livingEntity.getLocation().add(0, 1.5, 0);
+                    world.spawnParticle(Particle.CLOUD, currentParticleLoc.getX(), currentParticleLoc.getY(), currentParticleLoc.getZ(), 5, 0.2, 0.2, 0.2, 0);
+                    world.playSound(livingEntity.getLocation(), Sound.ENTITY_DOLPHIN_HURT, 0.5f, 2.0f);
                 }
-                
+
                 if (ticks >= 60) { // After 3 seconds
                     // Final disappearance
-                    world.playSound(goblin.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
-                    world.spawnParticle(Particle.CLOUD, goblin.getLocation().add(0, 1, 0), 30, 0.3, 0.5, 0.3, 0.05);
-                    cleanupGoblin(goblin.getUniqueId(), true);
+                    Location finalParticleLoc = livingEntity.getLocation().add(0, 1, 0);
+                    world.playSound(livingEntity.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+                    world.spawnParticle(Particle.CLOUD, finalParticleLoc.getX(), finalParticleLoc.getY(), finalParticleLoc.getZ(), 30, 0.3, 0.5, 0.3, 0.05);
+                    cleanupGoblin(livingEntity.getUniqueId(), true);
                     this.cancel();
                 }
             }
         }.runTaskTimer(plugin, 0L, 1L);
     }
 
+    @EventHandler
+    public void onGoblinTargetPlayer(EntityTargetLivingEntityEvent event) {
+        if (event.getEntity().hasMetadata(LOOT_GOBLIN_METADATA_KEY)) {
+            if (event.getTarget() instanceof Player) {
+                // Prevent the Loot Goblin from targeting players
+                event.setCancelled(true);
+            }
+        }
+    }
+
     private void cleanupGoblin(UUID goblinId, boolean withEscapeEffect) {
         GoblinTask task = activeGoblins.remove(goblinId);
         if (task != null) {
             task.cancel();
-            Zombie goblinEntity = task.goblin;
+            PigZombie goblinEntity = task.goblin; // Changed type
             if (goblinEntity != null && goblinEntity.isValid()) {
                 if (withEscapeEffect && !goblinEntity.hasMetadata(CRYING_METADATA_KEY)) {
                     goblinEntity.getWorld().playSound(goblinEntity.getLocation(), Sound.ENTITY_FOX_TELEPORT, 1.0f, 1.0f);
-                    goblinEntity.getWorld().spawnParticle(Particle.CLOUD, goblinEntity.getLocation().add(0, 1, 0), 20, 0.3, 0.3, 0.3, 0.05);
+                    Location escapeParticleLoc = goblinEntity.getLocation().add(0, 1, 0);
+                    goblinEntity.getWorld().spawnParticle(Particle.CLOUD, escapeParticleLoc.getX(), escapeParticleLoc.getY(), escapeParticleLoc.getZ(), 20, 0.3, 0.3, 0.3, 0.05);
                 }
                 goblinEntity.remove();
             }
@@ -263,18 +278,18 @@ public class LootGoblinEvent implements Event, Listener {
     }
 
     private class GoblinTask extends BukkitRunnable {
-        final Zombie goblin;
+        final PigZombie goblin; // Changed type from ZombifiedPiglin to PigZombie
         final Player initialPlayerTarget;
         Block targetChest = null;
         ItemStack carriedItem = null;
         boolean hasReachedChest = false;
         boolean isFleeing = false;
-        long spawnTime = System.currentTimeMillis();
+        long spawnTime = System.currentTimeMillis(); // This marks the initial spawn or task start time
         int fleePathfindTicks = 0;
         int fleeAttempts = 0;
-        static final int MAX_FLEE_ATTEMPTS = 10;
+        private Location fleeDestination = null;
 
-        GoblinTask(Zombie goblin, Player player) {
+        GoblinTask(PigZombie goblin, Player player) { // Changed type
             this.goblin = goblin;
             this.initialPlayerTarget = player;
         }
@@ -286,8 +301,22 @@ public class LootGoblinEvent implements Event, Listener {
                 return;
             }
 
+            // Continuously ensure passivity and pathfinder settings
+            goblin.setTarget(null);
+            if (goblin.getPathfinder() != null) {
+                goblin.getPathfinder().setCanOpenDoors(true);
+            }
+
+            // Timeout for finding/reaching a chest
+            if (!isFleeing && !hasReachedChest && (System.currentTimeMillis() - spawnTime) / 1000 > 30) {
+                plugin.getLogger().info("Loot Goblin for " + initialPlayerTarget.getName() + " timed out before reaching a chest.");
+                initialPlayerTarget.sendMessage(Component.text("The Loot Goblin got bored and vanished before finding a suitable chest!", NamedTextColor.YELLOW));
+                cleanupGoblin(goblin.getUniqueId(), true); // True for escape effect
+                return;
+            }
+
             if (isFleeing) {
-                if ((System.currentTimeMillis() - spawnTime) / 1000 > FLEE_TIMEOUT_SECONDS + (fleeAttempts * 5)) {
+                if ((System.currentTimeMillis() - spawnTime) / 1000 > FLEE_TIMEOUT_SECONDS + (fleeAttempts * 5)) { // Note: spawnTime is reset when fleeing starts
                     plugin.getLogger().info("Loot Goblin escaped from " + initialPlayerTarget.getName());
                     initialPlayerTarget.sendMessage(Component.text("The Loot Goblin got away!", NamedTextColor.RED));
                     cleanupGoblin(goblin.getUniqueId(), true);
@@ -299,14 +328,15 @@ public class LootGoblinEvent implements Event, Listener {
                 return;
             }
 
-            if (targetChest == null && !hasReachedChest && goblin.getEquipment().getItemInMainHand().getType() != Material.DIAMOND_SWORD) {
+            if (targetChest == null && !hasReachedChest) {
                 targetChest = findNearbyChest(goblin.getLocation(), CHEST_SEARCH_RADIUS);
                 if (targetChest != null) {
                     goblin.getWorld().playSound(goblin.getLocation(), Sound.ENTITY_PIGLIN_ADMIRING_ITEM, 1.0f, 1.5f);
                 } else {
-                    goblin.getEquipment().setItemInMainHand(new ItemStack(Material.DIAMOND_SWORD));
-                    goblin.setMetadata(AGGRO_SWORD_METADATA_KEY, new FixedMetadataValue(plugin, true));
-                    goblin.getWorld().playSound(goblin.getLocation(), Sound.ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR, 1.0f, 0.8f);
+                    // If no chest found, start fleeing
+                    isFleeing = true;
+                    spawnTime = System.currentTimeMillis();
+                    fleeFromPlayer();
                 }
             }
 
@@ -319,13 +349,9 @@ public class LootGoblinEvent implements Event, Listener {
                     spawnTime = System.currentTimeMillis();
                     fleeFromPlayer(); 
                 } else {
-                    goblin.getPathfinder().moveTo(targetChest.getLocation());
-                }
-            } else if (goblin.getEquipment().getItemInMainHand().getType() == Material.DIAMOND_SWORD) {
-                if (initialPlayerTarget.isValid() && initialPlayerTarget.isOnline() && !initialPlayerTarget.isDead()){
-                    goblin.getPathfinder().moveTo(initialPlayerTarget.getLocation());
-                } else {
-                     cleanupGoblin(goblin.getUniqueId(), true);
+                    // Path to the top center of the chest block to encourage climbing
+                    Location pathTarget = targetChest.getLocation().add(0.5, 1.0, 0.5);
+                    goblin.getPathfinder().moveTo(pathTarget);
                 }
             }
         }
@@ -382,63 +408,46 @@ public class LootGoblinEvent implements Event, Listener {
                 return;
             }
 
-            // Check if goblin is far enough to potentially despawn
-            double distanceToPlayer = goblin.getLocation().distance(initialPlayerTarget.getLocation());
-            if (distanceToPlayer > FLEE_RADIUS && random.nextDouble() < 0.1) { // 10% chance to despawn when far enough
-                plugin.getLogger().info("Loot Goblin escaped from " + initialPlayerTarget.getName());
-                initialPlayerTarget.sendMessage(Component.text("The Loot Goblin disappeared into the shadows!", NamedTextColor.RED));
-                cleanupGoblin(goblin.getUniqueId(), true);
-                return;
-            }
-
-            if(fleeAttempts >= MAX_FLEE_ATTEMPTS){
-                plugin.getLogger().info("Loot Goblin couldn't find a flee path after " + MAX_FLEE_ATTEMPTS + " attempts for "+ initialPlayerTarget.getName());
-                cleanupGoblin(goblin.getUniqueId(), true);
-                return;
-            }
-
-            Location playerLoc = initialPlayerTarget.getLocation();
-            Location goblinLoc = goblin.getLocation();
-            
-            // Calculate a random point to flee to
-            double fleeDistance = MIN_FLEE_DISTANCE + (random.nextDouble() * 10); // Random distance between 10-20 blocks
-            
-            // Add some randomness to the flee direction
-            Vector playerToGoblin = goblinLoc.toVector().subtract(playerLoc.toVector()).normalize();
-            Vector perpendicular = new Vector(-playerToGoblin.getZ(), 0, playerToGoblin.getX());
-            
-            // Mix the direct flee vector with a perpendicular vector for more circular motion
-            Vector fleeDir = playerToGoblin.clone().multiply(0.7) // 70% away from player
-                .add(perpendicular.multiply(random.nextDouble() - 0.5)) // Add sideways movement
-                .normalize()
-                .multiply(fleeDistance);
-
-            Location fleeTo = goblinLoc.clone().add(fleeDir);
-
-            // Try to find a valid location
-            for(int i = 0; i < 5; i++) {
-                Location tempFleeTo = goblinLoc.clone().add(fleeDir.clone().multiply((random.nextDouble() * 0.5) + 0.5));
-                Block blockAtFlee = tempFleeTo.getBlock();
-                if(blockAtFlee.isPassable() && blockAtFlee.getRelative(BlockFace.UP).isPassable() 
-                   && !blockAtFlee.getRelative(BlockFace.DOWN).isPassable()) {
-                    fleeTo = tempFleeTo;
-                    break;
+            // If we don't have a flee destination, pick one 30 blocks away
+            // in a random direction from the player's current location.
+            // This destination remains fixed for this fleeing phase.
+            if (fleeDestination == null) {
+                Location playerLoc = initialPlayerTarget.getLocation();
+                double angle = random.nextDouble() * 2 * Math.PI;
+                double dx = Math.cos(angle) * 30; // 30 blocks away
+                double dz = Math.sin(angle) * 30;
+                Location dest = playerLoc.clone().add(dx, 0, dz);
+                // Set Y to highest block at that X/Z for safety
+                if (playerLoc.getWorld() != null) { // Null check for world
+                    dest.setY(playerLoc.getWorld().getHighestBlockYAt(dest));
+                    fleeDestination = dest.add(0.5, 1.0, 0.5); // Center on block and ensure it's a walkable height
+                } else {
+                    // Fallback if world is null, shouldn't happen in normal gameplay
+                    cleanupGoblin(goblin.getUniqueId(), true);
+                    return;
                 }
-                // Rotate the flee direction if we can't find a spot
-                fleeDir.rotateAroundY(Math.PI / 4);
             }
-            
-            goblin.getPathfinder().moveTo(fleeTo);
-            
-            // Add some playful particles and sounds
-            if (random.nextDouble() < 0.2) { // 20% chance for extra effects
-                goblin.getWorld().playSound(goblin.getLocation(), Sound.ENTITY_DOLPHIN_PLAY, 0.5f, 1.8f);
-                goblin.getWorld().spawnParticle(Particle.HEART, goblin.getLocation().add(0, 1, 0), 5, 0.3, 0.3, 0.3, 0);
+
+            // Simply tell the goblin to pathfind to the destination.
+            if (fleeDestination != null) { // Check if fleeDestination was successfully set
+                goblin.getPathfinder().moveTo(fleeDestination);
+
+                // Check if the goblin has effectively reached its destination.
+                // Using a threshold of 2.5*2.5 blocks (distance squared 6.25).
+                if (goblin.getLocation().distanceSquared(fleeDestination) < 6.25) {
+                    plugin.getLogger().info("Loot Goblin reached its flee point and escaped from " + initialPlayerTarget.getName());
+                    initialPlayerTarget.sendMessage(Component.text("The Loot Goblin disappeared into the shadows!", NamedTextColor.RED));
+                    cleanupGoblin(goblin.getUniqueId(), true);
+                    return; // Goblin has escaped, task will be cancelled
+                }
             } else {
-                goblin.getWorld().playSound(goblin.getLocation(), Sound.ENTITY_CHICKEN_STEP, 0.5f, 1.8f);
+                // If fleeDestination is still null (e.g. world was null), goblin escapes as a fallback
+                 plugin.getLogger().warning("Loot Goblin could not determine a flee destination, escaping.");
+                 cleanupGoblin(goblin.getUniqueId(), true);
+                 return;
             }
-            
-            fleeAttempts++;
+
+            // Playful effects and step-by-step movement logic removed.
         }
 
         private Block findNearbyChest(Location center, double radius) {

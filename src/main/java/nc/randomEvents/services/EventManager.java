@@ -5,6 +5,7 @@ import nc.randomEvents.services.events.Event;
 import nc.randomEvents.services.events.SoundEvent;
 import nc.randomEvents.services.events.MeteorEvent;
 import nc.randomEvents.services.events.LootGoblinEvent;
+import nc.randomEvents.services.events.ZombieHoardEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -29,6 +30,7 @@ public class EventManager {
         addEvent(new SoundEvent());
         addEvent(new MeteorEvent(plugin));
         addEvent(new LootGoblinEvent(plugin));
+        addEvent(new ZombieHoardEvent(plugin));
         // Register other events here
     }
 
