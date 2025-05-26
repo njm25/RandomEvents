@@ -171,7 +171,8 @@ public class ZombieHoardEvent implements Event {
 
     private void giveWaveRewards(Player player, int waveNumber) {
         int itemsToGenerate = 1 + waveNumber; // Wave 1: 2 items, Wave 2: 3 items
-        List<ItemStack> rewards = rewardGenerator.generateRewards(itemsToGenerate);
+        RewardGenerator.Tier tier = waveNumber == 1 ? RewardGenerator.Tier.BASIC : RewardGenerator.Tier.COMMON;
+        List<ItemStack> rewards = rewardGenerator.generateRewards(tier, itemsToGenerate);
         if (!rewards.isEmpty()) {
             player.sendMessage("Wave " + waveNumber + " cleared! You received some loot!");
             for (ItemStack item : rewards) {

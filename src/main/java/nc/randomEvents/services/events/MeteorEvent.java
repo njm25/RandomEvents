@@ -70,9 +70,9 @@ public class MeteorEvent implements Event, Listener {
     private void spawnMeteorForPlayer(Player player) {
         Location playerLoc = player.getLocation();
         World world = player.getWorld();
-
-        double offsetX = (random.nextDouble() - 0.5) * 160; // Increased radius from -20 to +20 to -80 to +80
-        double offsetZ = (random.nextDouble() - 0.5) * 160; // Increased radius
+        
+        double offsetX = (random.nextDouble() - 0.5) * 96; // Decreased radius by 40% from -80 to +80 to -48 to +48
+        double offsetZ = (random.nextDouble() - 0.5) * 96; // Decreased radius
         double spawnY = Math.min(world.getMaxHeight() - 5, playerLoc.getY() + 60 + random.nextInt(40));
 
         Location meteorSpawnLoc = new Location(world, playerLoc.getX() + offsetX, spawnY, playerLoc.getZ() + offsetZ);
@@ -106,7 +106,7 @@ public class MeteorEvent implements Event, Listener {
             double rewardDropChance = 0.40; // 40% chance to drop rewards
             if (random.nextDouble() < rewardDropChance) {
                 int numberOfItemStacks = random.nextInt(2) + 1; // 1 or 2 different item types
-                List<ItemStack> rewards = rewardGenerator.generateRewards(numberOfItemStacks);
+                List<ItemStack> rewards = rewardGenerator.generateRewards(RewardGenerator.Tier.COMMON, numberOfItemStacks);
 
                 if (!rewards.isEmpty()) {
                     for (ItemStack itemStack : rewards) {

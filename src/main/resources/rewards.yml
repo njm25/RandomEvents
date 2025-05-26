@@ -1,25 +1,31 @@
-rewards:
-  DIAMOND:
-    chance: 10 # Relative weight for selection
-    minAmount: 1
-    maxAmount: 3
-  IRON_INGOT:
-    chance: 30
-    minAmount: 5
-    maxAmount: 10
-  GOLD_INGOT:
-    chance: 20
-    minAmount: 2
-    maxAmount: 5
-  EMERALD:
-    chance: 5
-    minAmount: 1
-    maxAmount: 2
-  APPLE:
-    chance: 50
-    minAmount: 3
-    maxAmount: 8
-  BREAD:
-    chance: 40
-    minAmount: 2
-    maxAmount: 6 
+tiers:
+  BASIC:
+    rewards:
+      APPLE:
+        chance: 60
+        minAmount: 2
+        maxAmount: 5
+      BREAD:
+        chance: 40
+        minAmount: 1
+        maxAmount: 3
+  COMMON:
+    rewards:
+      IRON_INGOT:
+        chance: 50
+        minAmount: 3
+        maxAmount: 7
+      GOLD_INGOT:
+        chance: 50
+        minAmount: 1
+        maxAmount: 3
+  RARE:
+    rewards:
+      DIAMOND:
+        chance: 40
+        minAmount: 1
+        maxAmount: 2
+      EMERALD:
+        chance: 60 # Higher chance within RARE tier, but RARE tier itself might be chosen less often
+        minAmount: 1
+        maxAmount: 1 
