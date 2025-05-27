@@ -1,6 +1,8 @@
-package nc.randomEvents.services.events;
+package nc.randomEvents.services.events.LootGoblin;
 
 import nc.randomEvents.RandomEvents;
+import nc.randomEvents.services.events.Event;
+
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;

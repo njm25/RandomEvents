@@ -1,9 +1,10 @@
-package nc.randomEvents.services.events;
+package nc.randomEvents.services.events.Meteor;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.services.RewardGenerator;
 import nc.randomEvents.services.RewardGenerator.Tier;
 import nc.randomEvents.services.RewardGenerator.TierQuantity;
+import nc.randomEvents.services.events.Event;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -54,7 +55,7 @@ public class MeteorEvent implements Event, Listener {
                 .append(Component.text("Look up! Meteors are incoming!", NamedTextColor.YELLOW)));
 
             new BukkitRunnable() {
-                int meteorsToSpawn = plugin.getConfigManager().getConfigValue(getName(), "amount", 20);
+                int meteorsToSpawn = plugin.getConfigManager().getConfigValue(getName(), "amount");
                 int meteorsSpawned = 0;
 
                 @Override
@@ -74,7 +75,7 @@ public class MeteorEvent implements Event, Listener {
         Location playerLoc = player.getLocation();
         World world = player.getWorld();
         
-        int radius = plugin.getConfigManager().getConfigValue(getName(), "radius", 40);
+        int radius = plugin.getConfigManager().getConfigValue(getName(), "radius");
         double offsetX = (random.nextDouble() - 0.5) * radius;
         double offsetZ = (random.nextDouble() - 0.5) * radius;
         double spawnY = 256;

@@ -1,7 +1,9 @@
-package nc.randomEvents.services.events;
+package nc.randomEvents.services.events.ZombieHoard;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.services.RewardGenerator;
+import nc.randomEvents.services.events.Event;
+
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -54,7 +56,7 @@ public class ZombieHoardEvent implements Event {
         List<Zombie> waveZombies = new ArrayList<>();
         activeZombies.put(player.getUniqueId(), waveZombies);
 
-        int zombiesPerWave = plugin.getConfigManager().getConfigValue(getName(), "zombiesPerWave", 10);
+        int zombiesPerWave = plugin.getConfigManager().getConfigValue(getName(), "zombiesPerWave");
         for (int i = 0; i < zombiesPerWave; i++) {
             spawnZombieNearPlayer(player, waveZombies);
         }
@@ -74,7 +76,7 @@ public class ZombieHoardEvent implements Event {
                 if (waveZombies.isEmpty()) {
                     this.cancel();
                     giveWaveRewards(player, waveNumber);
-                    int totalWaves = plugin.getConfigManager().getConfigValue(getName(), "waves", 2);
+                    int totalWaves = plugin.getConfigManager().getConfigValue(getName(), "waves");
                     if (waveNumber < totalWaves) {
                         startWave(player, waveNumber + 1);
                     } else {
