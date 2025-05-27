@@ -54,7 +54,7 @@ public class ZombieHoardEvent implements Event {
         List<Zombie> waveZombies = new ArrayList<>();
         activeZombies.put(player.getUniqueId(), waveZombies);
 
-        int zombiesPerWave = plugin.getConfigManager().getConfigValue(getName(), "zombiesPerWave", 10);
+        int zombiesPerWave = plugin.getConfigManager().getConfigValue(getName(), "zombiesPerWave");
         for (int i = 0; i < zombiesPerWave; i++) {
             spawnZombieNearPlayer(player, waveZombies);
         }
@@ -74,7 +74,7 @@ public class ZombieHoardEvent implements Event {
                 if (waveZombies.isEmpty()) {
                     this.cancel();
                     giveWaveRewards(player, waveNumber);
-                    int totalWaves = plugin.getConfigManager().getConfigValue(getName(), "waves", 2);
+                    int totalWaves = plugin.getConfigManager().getConfigValue(getName(), "waves");
                     if (waveNumber < totalWaves) {
                         startWave(player, waveNumber + 1);
                     } else {

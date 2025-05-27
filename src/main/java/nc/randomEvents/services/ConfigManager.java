@@ -38,7 +38,7 @@ public class ConfigManager {
         }
 
         // Update config with any missing values
-        setDefaults(); 
+        setDefaults();
     }
 
     private void loadDefaults() {
@@ -106,22 +106,32 @@ public class ConfigManager {
         }
     }
 
-    public <T> T getConfigValue(String eventName, String key, T defaultValue) {
+    @SuppressWarnings("unchecked")
+    public <T> T getConfigValue(String eventName, String key) {
         String path = "events." + eventName + "." + key;
-        Object value = plugin.getConfig().get(path, defaultValue);
+        
+        // Try to get from current config
+        Object value = plugin.getConfig().get(path);
+        
+        // If not found in current config, try to get from defaults
+        if (value == null) {
+            value = defaultConfig.get(path);
+            if (value == null) {
+                logger.warning("No value or default found for " + path);
+                return null;
+            }
+        }
         
         try {
-            @SuppressWarnings("unchecked")
-            T castedValue = (T) value;
-            return castedValue;
+            return (T) value;
         } catch (ClassCastException e) {
-            logger.warning("Invalid type for config value at " + path + ". Using default value.");
-            return defaultValue;
+            logger.warning("Invalid type for config value at " + path);
+            return null;
         }
     }
 
-    public <T> T getConfigValue(Event event, String key, T defaultValue) {
-        return getConfigValue(event.getName(), key, defaultValue);
+    public <T> T getConfigValue(Event event, String key) {
+        return getConfigValue(event.getName(), key);
     }
 
     public ConfigurationSection getEventConfig(Event event) {
