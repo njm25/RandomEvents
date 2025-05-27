@@ -6,6 +6,7 @@ import nc.randomEvents.commands.CommandManager;
 import nc.randomEvents.services.DataManager;
 import nc.randomEvents.services.EventManager;
 import nc.randomEvents.services.RewardGenerator;
+import nc.randomEvents.utils.Metrics;
 import nc.randomEvents.services.ConfigManager;
 
 public final class RandomEvents extends JavaPlugin {
@@ -14,10 +15,10 @@ public final class RandomEvents extends JavaPlugin {
     private DataManager dataManager;
     private RewardGenerator rewardGenerator;
     private ConfigManager configManager;
-
+    
     @Override
     public void onEnable() {
-        // Plugin startup logic
+        new Metrics(this, 26005);
         configManager = new ConfigManager(this);
         dataManager = new DataManager(this);
         rewardGenerator = new RewardGenerator(this);
