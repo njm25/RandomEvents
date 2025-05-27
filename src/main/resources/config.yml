@@ -2,7 +2,6 @@ events:
   MeteorEvent:
     radius: 40
     amount: 20
-    lootChance: 0.4
   ZombieHoardEvent:
     waves: 2
     zombiesPerWave: 10
