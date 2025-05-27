@@ -1,9 +1,10 @@
-package nc.randomEvents.services.events;
+package nc.randomEvents.services.events.Meteor;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.services.RewardGenerator;
 import nc.randomEvents.services.RewardGenerator.Tier;
 import nc.randomEvents.services.RewardGenerator.TierQuantity;
+import nc.randomEvents.services.events.Event;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;

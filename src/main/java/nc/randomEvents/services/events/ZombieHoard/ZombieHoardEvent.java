@@ -1,7 +1,9 @@
-package nc.randomEvents.services.events;
+package nc.randomEvents.services.events.ZombieHoard;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.services.RewardGenerator;
+import nc.randomEvents.services.events.Event;
+
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
