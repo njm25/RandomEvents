@@ -3,8 +3,8 @@ package nc.randomEvents;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import nc.randomEvents.commands.CommandManager;
-import nc.randomEvents.services.EventManager;
 import nc.randomEvents.services.DataManager;
+import nc.randomEvents.services.EventManager;
 import nc.randomEvents.services.RewardGenerator;
 import nc.randomEvents.services.ConfigManager;
 
