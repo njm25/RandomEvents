@@ -18,7 +18,7 @@ cd RandomEvents
 
 ### 2. Configuration Setup
 
-1. Create a new file named `config.txt` and configure the following settings:
+Create a new file named `config.txt` and configure the following settings:
 ```
 PROJECT_DIR=C:\Users\Name\GitHub\RandomEvents
 SERVER_DIR=C:\Users\Name\Server
