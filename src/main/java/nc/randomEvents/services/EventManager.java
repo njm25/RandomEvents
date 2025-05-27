@@ -7,6 +7,7 @@ import nc.randomEvents.services.events.MeteorEvent;
 import nc.randomEvents.services.events.QuestEvent;
 import nc.randomEvents.services.events.LootGoblinEvent;
 import nc.randomEvents.services.events.ZombieHoardEvent;
+import nc.randomEvents.services.events.SheepocalypseEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -33,6 +34,7 @@ public class EventManager {
         addEvent(new LootGoblinEvent(plugin));
         addEvent(new ZombieHoardEvent(plugin));
         addEvent(new QuestEvent(plugin));
+        addEvent(new SheepocalypseEvent(plugin));
         // Register other events here
     }
 
