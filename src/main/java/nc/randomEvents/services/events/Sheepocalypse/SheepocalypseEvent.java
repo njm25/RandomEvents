@@ -1,7 +1,9 @@
-package nc.randomEvents.services.events;
+package nc.randomEvents.services.events.Sheepocalypse;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.services.RewardGenerator;
+import nc.randomEvents.services.events.Event;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -231,12 +233,10 @@ public class SheepocalypseEvent implements Event, Listener {
         if (!isEventActive || !(event.getEntity() instanceof Sheep)) return;
         
         Sheep sheep = (Sheep) event.getEntity();
-        SheepBomb sheepBomb = null;
 
         // Find and remove the corresponding SheepBomb
         for (SheepBomb bomb : new HashSet<>(activeSheep)) {
             if (bomb.isSameSheep(sheep)) {
-                sheepBomb = bomb;
                 activeSheep.remove(bomb);
                 bomb.remove(); // Make sure to clean up the SheepBomb
                 break;

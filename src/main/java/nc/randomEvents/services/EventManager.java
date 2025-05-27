@@ -2,11 +2,10 @@ package nc.randomEvents.services;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.services.events.Event;
-import nc.randomEvents.services.events.SheepocalypseEvent;
-
 import nc.randomEvents.services.events.LootGoblin.LootGoblinEvent;
 import nc.randomEvents.services.events.Meteor.MeteorEvent;
 import nc.randomEvents.services.events.Quest.QuestEvent;
+import nc.randomEvents.services.events.Sheepocalypse.SheepocalypseEvent;
 import nc.randomEvents.services.events.Sound.SoundEvent;
 import nc.randomEvents.services.events.ZombieHoard.ZombieHoardEvent;
 

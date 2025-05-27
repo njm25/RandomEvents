@@ -1,9 +1,8 @@
-package nc.randomEvents.services.events;
+package nc.randomEvents.services.events.Sheepocalypse;
 
 import nc.randomEvents.RandomEvents;
 import org.bukkit.DyeColor;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.World;
