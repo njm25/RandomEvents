@@ -1,0 +1,7 @@
+events:
+  MeteorEvent:
+    radius: 40
+    amount: 20
+  ZombieHoardEvent:
+    waves: 2
+    zombiesPerWave: 10
