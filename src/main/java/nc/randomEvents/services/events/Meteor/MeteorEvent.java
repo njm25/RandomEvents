@@ -108,8 +108,11 @@ public class MeteorEvent implements Event, Listener {
         if (event.getHitBlock() != null) {
             Location impactLocation = event.getHitBlock().getLocation().add(0.5, 1, 0.5); // Center on top of block
 
-            double rewardDropChance = 0.40; // 40% chance to drop rewards
-            if (random.nextDouble() < rewardDropChance) {
+            double lootChance = plugin.getConfigManager().getConfigValue(getName(), "lootChance");
+            // Ensure lootChance is between 0 and 1
+            lootChance = Math.max(0.0, Math.min(1.0, lootChance));
+            
+            if (random.nextDouble() < lootChance) {
                 int numberOfItemStacks = random.nextInt(2) + 1; // 1 or 2 different item types
                 int numberOfItemStacks1 = random.nextInt(2) + 1; // 1 or 2 different item types
                 List<ItemStack> rewards = rewardGenerator.generateRewards(
