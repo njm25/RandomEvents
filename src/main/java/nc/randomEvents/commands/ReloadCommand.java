@@ -14,7 +14,7 @@ public class ReloadCommand implements SubCommand {
 
     @Override
     public boolean execute(CommandSender sender, String[] args) {
-        
+        this.plugin.getConfigManager().reload();
         this.plugin.reloadConfig();
         this.plugin.getRewardGenerator().reloadRewards();
         this.plugin.getDataManager().reloadData();

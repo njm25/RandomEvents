@@ -23,10 +23,8 @@ public class ZombieHoardEvent implements Event {
     private final RewardGenerator rewardGenerator;
     private final Random random = new Random();
     private final ConcurrentHashMap<UUID, List<Zombie>> activeZombies = new ConcurrentHashMap<>(); // Player UUID to their wave zombies
-    private final int ZOMBIES_PER_WAVE = 10;
-    private final int WAVE_COUNT = 2;
     private final int SPAWN_MIN_DISTANCE = 15;
-    private final int SPAWN_MAX_DISTANCE = 25; // Added a max distance for better control
+    private final int SPAWN_MAX_DISTANCE = 25;
 
     public ZombieHoardEvent(RandomEvents plugin) {
         this.plugin = plugin;
@@ -40,7 +38,7 @@ public class ZombieHoardEvent implements Event {
 
     @Override
     public String getDescription() {
-        return "Spawns two waves of zombies that drop loot when a wave is cleared.";
+        return "Spawns waves of zombies that drop loot when a wave is cleared.";
     }
 
     @Override
@@ -56,7 +54,8 @@ public class ZombieHoardEvent implements Event {
         List<Zombie> waveZombies = new ArrayList<>();
         activeZombies.put(player.getUniqueId(), waveZombies);
 
-        for (int i = 0; i < ZOMBIES_PER_WAVE; i++) {
+        int zombiesPerWave = plugin.getConfigManager().getConfigValue(getName(), "zombiesPerWave", 10);
+        for (int i = 0; i < zombiesPerWave; i++) {
             spawnZombieNearPlayer(player, waveZombies);
         }
 
@@ -75,7 +74,8 @@ public class ZombieHoardEvent implements Event {
                 if (waveZombies.isEmpty()) {
                     this.cancel();
                     giveWaveRewards(player, waveNumber);
-                    if (waveNumber < WAVE_COUNT) {
+                    int totalWaves = plugin.getConfigManager().getConfigValue(getName(), "waves", 2);
+                    if (waveNumber < totalWaves) {
                         startWave(player, waveNumber + 1);
                     } else {
                         // Last wave cleared

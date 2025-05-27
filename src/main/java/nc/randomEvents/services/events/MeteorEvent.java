@@ -54,7 +54,7 @@ public class MeteorEvent implements Event, Listener {
                 .append(Component.text("Look up! Meteors are incoming!", NamedTextColor.YELLOW)));
 
             new BukkitRunnable() {
-                int meteorsToSpawn = random.nextInt(10) + 10; // Increased from 7-12 to 15-24 meteors per player
+                int meteorsToSpawn = plugin.getConfigManager().getConfigValue(getName(), "amount", 20);
                 int meteorsSpawned = 0;
 
                 @Override
@@ -66,7 +66,7 @@ public class MeteorEvent implements Event, Listener {
                     spawnMeteorForPlayer(player);
                     meteorsSpawned++;
                 }
-            }.runTaskTimer(plugin, 0L, random.nextInt(20) + 10L); // Spawn one every 0.5 - 1.5 seconds (10-29 ticks)
+            }.runTaskTimer(plugin, 0L, random.nextInt(20) + 10L);
         }
     }
 
@@ -74,8 +74,9 @@ public class MeteorEvent implements Event, Listener {
         Location playerLoc = player.getLocation();
         World world = player.getWorld();
         
-        double offsetX = (random.nextDouble() - 0.5) * 40;
-        double offsetZ = (random.nextDouble() - 0.5) * 40;
+        int radius = plugin.getConfigManager().getConfigValue(getName(), "radius", 40);
+        double offsetX = (random.nextDouble() - 0.5) * radius;
+        double offsetZ = (random.nextDouble() - 0.5) * radius;
         double spawnY = 256;
 
         Location meteorSpawnLoc = new Location(world, playerLoc.getX() + offsetX, spawnY, playerLoc.getZ() + offsetZ);
@@ -83,8 +84,8 @@ public class MeteorEvent implements Event, Listener {
         Fireball fireball = world.spawn(meteorSpawnLoc, Fireball.class);
         Vector direction = new Vector((random.nextDouble() - 0.5) * 0.2, -1.0, (random.nextDouble() - 0.5) * 0.2);
         fireball.setDirection(direction.normalize());
-        fireball.setYield(0.0F);           // Small explosion (affects ~1-2 blocks)
-        fireball.setIsIncendiary(false);   // Prevent fire
+        fireball.setYield(0.0F);
+        fireball.setIsIncendiary(false);
         fireball.setShooter(null);
         fireball.setMetadata(METEOR_METADATA_KEY, new FixedMetadataValue(plugin, true));
     }
