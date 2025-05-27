@@ -59,6 +59,7 @@ public class Metrics {
    * @param serviceId The id of the service. It can be found at <a
    *     href="https://bstats.org/what-is-my-plugin-id">What is my plugin id?</a>
    */
+  @SuppressWarnings("deprecation")
   public Metrics(Plugin plugin, int serviceId) {
     this.plugin = plugin;
     // Get the config file
@@ -150,6 +151,7 @@ public class Metrics {
     builder.appendField("coreCount", Runtime.getRuntime().availableProcessors());
   }
 
+  @SuppressWarnings("deprecation")
   private void appendServiceData(JsonObjectBuilder builder) {
     builder.appendField("pluginVersion", plugin.getDescription().getVersion());
   }
@@ -352,6 +354,7 @@ public class Metrics {
         infoLogger.accept("Sent bStats metrics data: " + data.toString());
       }
       String url = String.format(REPORT_URL, platform);
+      @SuppressWarnings("deprecation")
       HttpsURLConnection connection = (HttpsURLConnection) new URL(url).openConnection();
       // Compress the data to save bandwidth
       byte[] compressedData = compress(data.toString());
