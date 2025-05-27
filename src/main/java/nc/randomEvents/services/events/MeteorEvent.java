@@ -54,7 +54,7 @@ public class MeteorEvent implements Event, Listener {
                 .append(Component.text("Look up! Meteors are incoming!", NamedTextColor.YELLOW)));
 
             new BukkitRunnable() {
-                int meteorsToSpawn = plugin.getConfigManager().getConfigValue(getName(), "amount", 20);
+                int meteorsToSpawn = plugin.getConfigManager().getConfigValue(getName(), "amount");
                 int meteorsSpawned = 0;
 
                 @Override
@@ -74,7 +74,7 @@ public class MeteorEvent implements Event, Listener {
         Location playerLoc = player.getLocation();
         World world = player.getWorld();
         
-        int radius = plugin.getConfigManager().getConfigValue(getName(), "radius", 40);
+        int radius = plugin.getConfigManager().getConfigValue(getName(), "radius");
         double offsetX = (random.nextDouble() - 0.5) * radius;
         double offsetZ = (random.nextDouble() - 0.5) * radius;
         double spawnY = 256;
