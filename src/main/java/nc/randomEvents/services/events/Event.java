@@ -2,10 +2,10 @@ package nc.randomEvents.services.events;
 
 import org.bukkit.entity.Player;
 
-import java.util.List;
+import java.util.Set;
 
 public interface Event {
-    void execute(List<Player> players);
+    void execute(Set<Player> playerSets);
     String getName();
     String getDescription();
 }

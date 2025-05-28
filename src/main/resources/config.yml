@@ -1,8 +1,11 @@
 events:
   MeteorEvent:
     radius: 40
-    amount: 20
+    amountPerPlayer: 5
     lootChance: 0.4
   ZombieHoardEvent:
     waves: 2
     zombiesPerWave: 10
+  Sheepocalypse:
+    duration: 45
+    bombTimer: 10
