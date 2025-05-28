@@ -23,6 +23,8 @@ import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
+
+import nc.randomEvents.utils.AttributeHelper;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
@@ -132,12 +134,13 @@ public class LootGoblinEvent implements Event, Listener {
         goblin.customName(Component.text("Loot Goblin", NamedTextColor.GOLD));
         goblin.setCustomNameVisible(true);
 
-        if (goblin.getAttribute(Attribute.MOVEMENT_SPEED) != null) {
+        Attribute movementSpeed = AttributeHelper.getAttributeSafely("MOVEMENT_SPEED");
+        if (goblin.getAttribute(movementSpeed) != null) {
             double speedMultiplier = plugin.getConfigManager().getConfigValue(getName(), "speed");
-            double baseSpeed = goblin.getAttribute(Attribute.MOVEMENT_SPEED).getBaseValue();
-            goblin.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(baseSpeed * speedMultiplier);
+            double baseSpeed = goblin.getAttribute(movementSpeed).getBaseValue();
+            goblin.getAttribute(movementSpeed).setBaseValue(baseSpeed * speedMultiplier);
         }
-
+        
         // Ensure goblin starts with an empty hand
         if (goblin.getEquipment() != null) {
             goblin.getEquipment().setItemInMainHand(new ItemStack(Material.AIR));
