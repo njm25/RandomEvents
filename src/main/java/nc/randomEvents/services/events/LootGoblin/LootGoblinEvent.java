@@ -6,6 +6,7 @@ import nc.randomEvents.services.events.Event;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -130,6 +131,12 @@ public class LootGoblinEvent implements Event, Listener {
         goblin.setAge(-1); // Ensure it's a baby
         goblin.customName(Component.text("Loot Goblin", NamedTextColor.GOLD));
         goblin.setCustomNameVisible(true);
+
+        if (goblin.getAttribute(Attribute.MOVEMENT_SPEED) != null) {
+            double speedMultiplier = plugin.getConfigManager().getConfigValue(getName(), "speed");
+            double baseSpeed = goblin.getAttribute(Attribute.MOVEMENT_SPEED).getBaseValue();
+            goblin.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(baseSpeed * speedMultiplier);
+        }
 
         // Ensure goblin starts with an empty hand
         if (goblin.getEquipment() != null) {
