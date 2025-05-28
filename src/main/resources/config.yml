@@ -9,3 +9,5 @@ events:
   Sheepocalypse:
     duration: 45
     bombTimer: 10
+  LootGoblinEvent:
+    speed: 1.0
