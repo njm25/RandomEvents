@@ -3,6 +3,7 @@ package nc.randomEvents.services.events.Sheepocalypse;
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.services.RewardGenerator;
 import nc.randomEvents.services.events.Event;
+import nc.randomEvents.utils.LocationUtils;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -23,6 +24,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class SheepocalypseEvent implements Event, Listener {
     private final RandomEvents plugin;
@@ -33,7 +35,8 @@ public class SheepocalypseEvent implements Event, Listener {
     private BukkitTask checkEndTask;
     private boolean isEventActive;
     private boolean isSpawningComplete;
-    private static final int EVENT_SPAWN_DURATION = 45 * 20; // 45 seconds of spawning (in ticks)
+    private static final int GROUP_RADIUS = 50; // Radius for grouping players
+    private final Random random = new Random();
 
     public SheepocalypseEvent(RandomEvents plugin) {
         this.plugin = plugin;
@@ -46,7 +49,7 @@ public class SheepocalypseEvent implements Event, Listener {
 
     @Override
     public String getName() {
-        return "sheepocalypse";
+        return "Sheepocalypse";
     }
 
     @Override
@@ -55,9 +58,8 @@ public class SheepocalypseEvent implements Event, Listener {
     }
 
     @Override
-    public void execute(List<Player> players) {
+    public void execute(Set<Player> players) {
         if (isEventActive) {
-            // If there's an existing event, stop it WITHOUT giving rewards
             stopEvent(false);
         }
 
@@ -65,8 +67,6 @@ public class SheepocalypseEvent implements Event, Listener {
         isSpawningComplete = false;
         activeSheep.clear();
         givenShears.clear();
-        
-        // Give all players shears
         for (Player player : players) {
             ItemStack shears = new ItemStack(Material.SHEARS);
             player.getInventory().addItem(shears);
@@ -75,82 +75,46 @@ public class SheepocalypseEvent implements Event, Listener {
                 .append(Component.text("The sheep have gone mad! Quick, shear them before they explode!", NamedTextColor.YELLOW)));
         }
 
-        // Start spawning sheep near random players
+        // Start spawning sheep near player groups
         spawnTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (!isEventActive || players.isEmpty()) {
                 stopEvent(false);
                 return;
             }
-            
-            // Pick a random player to spawn sheep near
-            Player targetPlayer = players.get(new Random().nextInt(players.size()));
-            World world = targetPlayer.getWorld();
-            
-            // Spawn sheep near the player (between 4-11 blocks away)
-            for (int i = 0; i < 1; i++) {
-                Location spawnLoc = null;
-                int attempts = 0;
-                
-                while (spawnLoc == null && attempts < 10) {
-                    attempts++;
-                    
-                    // Get random angle and distance
-                    double angle = Math.random() * 2 * Math.PI;
-                    double distance = 4 + Math.random() * 7; // Between 4 and 11 blocks
-                    
-                    // Convert to x/z coordinates
-                    int x = targetPlayer.getLocation().getBlockX() + (int)(Math.cos(angle) * distance);
-                    int z = targetPlayer.getLocation().getBlockZ() + (int)(Math.sin(angle) * distance);
-                    
-                    // Get the highest non-air block
-                    Location potentialLoc = new Location(world, x, 0, z);
-                    potentialLoc.setY(world.getHighestBlockYAt(x, z));
-                    
-                    // Check if Y level is within 6 blocks of player
-                    if (Math.abs(potentialLoc.getY() - targetPlayer.getLocation().getY()) > 6) {
-                        continue;
-                    }
-                    
-                    // Move up until we find air (in case of trees/overhangs)
-                    while (potentialLoc.getBlock().getType() != Material.AIR && potentialLoc.getY() < world.getMaxHeight() - 2) {
-                        potentialLoc.add(0, 1, 0);
-                        // Check Y level again after moving up
-                        if (Math.abs(potentialLoc.getY() - targetPlayer.getLocation().getY()) > 6) {
-                            potentialLoc = null;
-                            break;
-                        }
-                    }
-                    
-                    // Verify location is valid
-                    if (potentialLoc != null && 
-                        potentialLoc.getBlock().getType() == Material.AIR && 
-                        potentialLoc.clone().add(0, -1, 0).getBlock().getType().isSolid()) {
-                        
-                        // Center the sheep on the block
-                        spawnLoc = potentialLoc.add(0.5, 0, 0.5);
-                    }
+
+            // Recalculate groups each tick to handle player movement
+            Set<Set<Player>> currentGroups = LocationUtils.groupPlayers(
+                players.stream().filter(p -> p.isOnline() && !p.isDead()).collect(Collectors.toSet()),
+                GROUP_RADIUS
+            );
+
+            for (Set<Player> group : currentGroups) {
+                Location groupMidpoint = LocationUtils.findMidpoint(group);
+                if (groupMidpoint == null) continue;
+
+                // Find the player farthest from the midpoint to calculate spawn radius
+                double maxDistance = 0;
+                for (Player p : group) {
+                    double dist = p.getLocation().distance(groupMidpoint);
+                    maxDistance = Math.max(maxDistance, dist);
                 }
-                
-                // If we found a valid location, spawn the sheep
-                if (spawnLoc != null) {
-                    Sheep sheep = world.spawn(spawnLoc, Sheep.class);
-                    sheep.setRemoveWhenFarAway(true);
-                    
-                    // Play spawn sounds
-                    world.playSound(sheep.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.2f);
-                    world.playSound(sheep.getLocation(), Sound.ENTITY_SHEEP_AMBIENT, 2.0f, 1.0f);
-                    world.playSound(sheep.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 2.0f);
-                    
-                    // Use array to hold reference that can be modified in lambda
-                    final SheepBomb[] sheepBombRef = new SheepBomb[1];
-                    sheepBombRef[0] = new SheepBomb(plugin, sheep, () -> {
-                        // This will be called when the sheep explodes
-                        activeSheep.remove(sheepBombRef[0]);
-                    });
-                    activeSheep.add(sheepBombRef[0]);
+
+                // Add 10 blocks to the max distance for spawn radius
+                double spawnRadius = maxDistance + 10;
+
+                // Try to spawn sheep - one for each player in the group
+                for (int i = 0; i < group.size(); i++) {
+                    Location spawnLoc = findSafeSpawnLocation(groupMidpoint, spawnRadius);
+                    if (spawnLoc != null) {
+                        spawnSheep(spawnLoc);
+                    }
                 }
             }
-        }, 0L, 80L); // Spawn every 4 seconds (80 ticks)
+        }, 0L, 80L); // Spawn every 4 seconds
+
+        // Get duration from config (default 45 seconds)
+        int durationSeconds = plugin.getConfigManager().getConfigValue(getName(), "duration");
+        int durationTicks = durationSeconds * 20;
 
         // Schedule spawning end
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -159,9 +123,9 @@ public class SheepocalypseEvent implements Event, Listener {
                 spawnTask.cancel();
                 spawnTask = null;
             }
-        }, EVENT_SPAWN_DURATION);
+        }, durationTicks);
 
-        // Start checking for event end (when all sheep are gone)
+        // Start checking for event end
         checkEndTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (isSpawningComplete && activeSheep.isEmpty()) {
                 for (Player player : players) {
@@ -170,9 +134,82 @@ public class SheepocalypseEvent implements Event, Listener {
                         giveEndRewards(player);
                     }
                 }
-                stopEvent(false); // Don't give rewards again, they were just given
+                stopEvent(false);
             }
-        }, 20L, 20L); // Check every second
+        }, 20L, 20L);
+    }
+
+    private Location findSafeSpawnLocation(Location center, double radius) {
+        World world = center.getWorld();
+        if (world == null) return null;
+
+        for (int attempts = 0; attempts < 15; attempts++) { // Increased attempts
+            // Get random angle and distance within radius
+            double angle = random.nextDouble() * 2 * Math.PI;
+            double distance = radius * 0.5 + random.nextDouble() * (radius * 0.5); // Between 50% and 100% of radius
+            
+            // Calculate potential location
+            double x = center.getX() + (Math.cos(angle) * distance);
+            double z = center.getZ() + (Math.sin(angle) * distance);
+            
+            Location potentialLoc = new Location(world, x, 0, z);
+            int highestY = world.getHighestBlockYAt(potentialLoc);
+            potentialLoc.setY(highestY);
+
+            // Check if the location is too high or too low relative to center
+            if (Math.abs(potentialLoc.getY() - center.getY()) > 10) {
+                continue; // Skip if height difference is too large
+            }
+
+            // Move up until we find air (in case of trees/overhangs)
+            while (potentialLoc.getY() < world.getMaxHeight() - 2 && !potentialLoc.getBlock().getType().isAir()) {
+                potentialLoc.add(0, 1, 0);
+            }
+
+            if (isSafeLocation(potentialLoc)) {
+                return potentialLoc.add(0.5, 0, 0.5); // Center on block
+            }
+        }
+        return null;
+    }
+
+    private boolean isSafeLocation(Location loc) {
+        if (loc == null || loc.getWorld() == null) return false;
+        
+        // Check block at feet level
+        if (!loc.getBlock().getType().isAir()) return false;
+        
+        // Check block above (head level)
+        Location headLoc = loc.clone().add(0, 1, 0);
+        if (!headLoc.getBlock().getType().isAir()) return false;
+        
+        // Check block below (ground)
+        Location groundLoc = loc.clone().add(0, -1, 0);
+        if (!groundLoc.getBlock().getType().isSolid()) return false;
+        
+        // Make sure we're not spawning in water or lava
+        if (loc.getBlock().isLiquid() || headLoc.getBlock().isLiquid()) return false;
+        
+        return true;
+    }
+
+    private void spawnSheep(Location spawnLoc) {
+        World world = spawnLoc.getWorld();
+        if (world == null) return;
+
+        Sheep sheep = world.spawn(spawnLoc, Sheep.class);
+        sheep.setRemoveWhenFarAway(true);
+
+        // Play spawn sounds
+        world.playSound(spawnLoc, Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.2f);
+        world.playSound(spawnLoc, Sound.ENTITY_SHEEP_AMBIENT, 2.0f, 1.0f);
+        world.playSound(spawnLoc, Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 2.0f);
+
+        // Create sheep bomb with configurable timer
+        int bombTimerSeconds = plugin.getConfigManager().getConfigValue(getName(), "bombTimer");
+        final SheepBomb[] sheepBombRef = new SheepBomb[1];
+        sheepBombRef[0] = new SheepBomb(plugin, sheep, () -> activeSheep.remove(sheepBombRef[0]), bombTimerSeconds * 20);
+        activeSheep.add(sheepBombRef[0]);
     }
 
     private void removeShears(Player player) {

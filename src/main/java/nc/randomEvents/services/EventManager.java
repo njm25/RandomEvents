@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class EventManager {
@@ -52,9 +53,9 @@ public class EventManager {
                 return false;
             }
 
-            List<Player> playersInAcceptedWorlds = Bukkit.getOnlinePlayers().stream()
+            Set<Player> playersInAcceptedWorlds = Bukkit.getOnlinePlayers().stream()
                     .filter(player -> acceptedWorlds.contains(player.getWorld().getName().toLowerCase()))
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toSet());
 
             if (playersInAcceptedWorlds.isEmpty()) {
                 plugin.getLogger().info("No players online in accepted worlds to start event: " + eventName);

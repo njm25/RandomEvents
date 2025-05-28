@@ -86,7 +86,7 @@ public class LootGoblinEvent implements Event, Listener {
     }
 
     @Override
-    public void execute(List<Player> players) {
+    public void execute(Set<Player> players) {
         for (Player player : players) {
             if (!player.isOnline() || player.isDead()) continue;
             spawnGoblinForPlayer(player);

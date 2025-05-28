@@ -16,6 +16,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -44,7 +45,7 @@ public class ZombieHoardEvent implements Event {
     }
 
     @Override
-    public void execute(List<Player> players) {
+    public void execute(Set<Player> players) {
         for (Player player : players) {
             if (player.isOnline() && !player.isDead()) {
                 startWave(player, 1);

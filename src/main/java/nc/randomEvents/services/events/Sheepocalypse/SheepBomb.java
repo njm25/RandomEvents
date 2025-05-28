@@ -17,15 +17,20 @@ public class SheepBomb {
     private final Sheep sheep;
     private BukkitTask colorChangeTask;
     private BukkitTask moveTask;
-    private int timeLeft = 200; // 10 seconds (200 ticks)
+    private int timeLeft;
     private Location fleeDestination = null;
     private final Random random = new Random();
     private final Runnable onExplode;
 
     public SheepBomb(RandomEvents plugin, Sheep sheep, Runnable onExplode) {
+        this(plugin, sheep, onExplode, 200); // Default to 10 seconds (200 ticks)
+    }
+
+    public SheepBomb(RandomEvents plugin, Sheep sheep, Runnable onExplode, int timerTicks) {
         this.plugin = plugin;
         this.sheep = sheep;
         this.onExplode = onExplode;
+        this.timeLeft = timerTicks;
         
         // Initialize sheep
         sheep.setColor(DyeColor.LIME);
