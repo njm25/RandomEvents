@@ -6,6 +6,7 @@ import nc.randomEvents.services.RewardGenerator.Tier;
 import nc.randomEvents.services.RewardGenerator.TierQuantity;
 import nc.randomEvents.services.events.Event;
 import nc.randomEvents.utils.LocationUtils;
+import nc.randomEvents.utils.SoundHelper;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -148,7 +149,7 @@ public class MeteorEvent implements Event, Listener {
                         fireball.getWorld().dropItemNaturally(impactLocation, itemStack);
                     }
                     impactLocation.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, impactLocation, 20, 0.5, 0.5, 0.5, 0.1);
-                    impactLocation.getWorld().playSound(impactLocation, org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
+                    SoundHelper.playWorldSoundSafely(impactLocation.getWorld(), "entity.player.levelup", impactLocation, 1.0f, 1.5f);
                 }
             }
         }

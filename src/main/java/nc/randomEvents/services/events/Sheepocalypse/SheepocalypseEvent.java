@@ -4,11 +4,11 @@ import nc.randomEvents.RandomEvents;
 import nc.randomEvents.services.RewardGenerator;
 import nc.randomEvents.services.events.Event;
 import nc.randomEvents.utils.LocationUtils;
+import nc.randomEvents.utils.SoundHelper;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Sheep;
@@ -201,9 +201,9 @@ public class SheepocalypseEvent implements Event, Listener {
         sheep.setRemoveWhenFarAway(true);
 
         // Play spawn sounds
-        world.playSound(spawnLoc, Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.2f);
-        world.playSound(spawnLoc, Sound.ENTITY_SHEEP_AMBIENT, 2.0f, 1.0f);
-        world.playSound(spawnLoc, Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 2.0f);
+        SoundHelper.playWorldSoundSafely(world, "entity.enderman.teleport", spawnLoc, 1.0f, 1.2f);
+        SoundHelper.playWorldSoundSafely(world, "entity.sheep.ambient", spawnLoc, 2.0f, 1.0f);
+        SoundHelper.playWorldSoundSafely(world, "block.note.pling", spawnLoc, 1.0f, 2.0f);
 
         // Create sheep bomb with configurable timer
         int bombTimerSeconds = plugin.getConfigManager().getConfigValue(getName(), "bombTimer");
@@ -255,11 +255,11 @@ public class SheepocalypseEvent implements Event, Listener {
             
             List<ItemStack> rewards = rewardGenerator.generateRewards(tier, 1);
             for (ItemStack reward : rewards) {
-                player.getWorld().dropItemNaturally(player.getLocation(), reward);
+                player.getWorld().dropItemNaturally(sheep.getLocation(), reward);
             }
             
             // Play success sound
-            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 2.0f);
+            SoundHelper.playPlayerSoundSafely(player, "entity.player.levelup", player.getLocation(), 1.0f, 2.0f);
             
             sheepBomb.playShearAndPoofEffect(); // This will handle the shearing visual and removal after effects
         }

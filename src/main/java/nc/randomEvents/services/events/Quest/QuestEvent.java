@@ -6,11 +6,11 @@ import nc.randomEvents.services.RewardGenerator.Tier;
 import nc.randomEvents.services.RewardGenerator.TierQuantity;
 import nc.randomEvents.services.events.Event;
 import nc.randomEvents.utils.LocationUtils;
+import nc.randomEvents.utils.SoundHelper;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.Particle;
-import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
 import org.bukkit.block.Container;
@@ -249,8 +249,8 @@ public class QuestEvent implements Event, Listener {
             player.sendMessage(Component.text("[Event] You have received an Ancient Scroll! Check your inventory.", NamedTextColor.GOLD));
             
             // Play mysterious sounds
-            player.playSound(player.getLocation(), Sound.ITEM_BOOK_PAGE_TURN, 0.7f, 0.5f);
-            player.playSound(player.getLocation(), Sound.BLOCK_ENCHANTMENT_TABLE_USE, 0.5f, 0.8f);
+            SoundHelper.playPlayerSoundSafely(player, "item.book.page_turn", player.getLocation(), 0.7f, 0.5f);
+            SoundHelper.playPlayerSoundSafely(player, "block.enchantment_table.use", player.getLocation(), 0.5f, 0.8f);
         }
     }
 
@@ -291,8 +291,8 @@ public class QuestEvent implements Event, Listener {
             Location effectLoc = clickedBlock.getLocation().add(0.5, 0.5, 0.5);
             player.getWorld().spawnParticle(Particle.PORTAL, effectLoc, 50, 0.5, 0.5, 0.5, 1);
             player.getWorld().spawnParticle(Particle.END_ROD, effectLoc, 20, 0.3, 0.3, 0.3, 0.1);
-            player.getWorld().playSound(effectLoc, Sound.BLOCK_ENCHANTMENT_TABLE_USE, 1.0f, 1.0f);
-            player.getWorld().playSound(effectLoc, Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 0.5f);
+            SoundHelper.playWorldSoundSafely(player.getWorld(), "block.enchantment_table.use", effectLoc, 1.0f, 1.0f);
+            SoundHelper.playWorldSoundSafely(player.getWorld(), "entity.player.levelup", effectLoc, 1.0f, 0.5f);
 
             // Remove chest
             clickedBlock.setType(Material.AIR);

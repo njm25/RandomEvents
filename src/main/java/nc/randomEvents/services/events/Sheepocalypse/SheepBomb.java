@@ -1,10 +1,11 @@
 package nc.randomEvents.services.events.Sheepocalypse;
 
 import nc.randomEvents.RandomEvents;
+import nc.randomEvents.utils.SoundHelper;
+
 import org.bukkit.DyeColor;
 import org.bukkit.Location;
 import org.bukkit.Particle;
-import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.entity.Sheep;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -51,7 +52,7 @@ public class SheepBomb {
 
                 // Random sheep noises
                 if (Math.random() < 0.3) { // 30% chance each tick to make noise
-                    sheep.getWorld().playSound(sheep.getLocation(), Sound.ENTITY_SHEEP_AMBIENT, 0.8f, 1.0f);
+                    SoundHelper.playWorldSoundSafely(sheep.getWorld(), "entity.sheep.ambient", sheep.getLocation(), 0.8f, 1.0f);
                 }
 
                 // If we don't have a flee destination or we've reached it, pick a new one
@@ -103,11 +104,11 @@ public class SheepBomb {
                     sheep.setColor(DyeColor.RED);
                     // Play tick sound during red phase
                     if (timeLeft % 20 == 0) { // Every second
-                        sheep.getWorld().playSound(sheep.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, 1.0f, 0.5f);
+                        SoundHelper.playWorldSoundSafely(sheep.getWorld(), "block.note.hat", sheep.getLocation(), 1.0f, 0.5f);
                     }
                     // Add creeper hiss only once when entering final second
                     if (timeLeft == 20 && !hasPlayedHiss) {
-                        sheep.getWorld().playSound(sheep.getLocation(), Sound.ENTITY_CREEPER_PRIMED, 1.0f, 1.0f);
+                        SoundHelper.playWorldSoundSafely(sheep.getWorld(), "entity.creeper.primed", sheep.getLocation(), 1.0f, 1.0f);
                         hasPlayedHiss = true;
                     }
                 } else if (timeLeft <= 120) { // 3-6 seconds
@@ -131,7 +132,7 @@ public class SheepBomb {
             World world = sheep.getWorld();
             
             // Play explosion sound and particles
-            world.playSound(loc, Sound.ENTITY_GENERIC_EXPLODE, 1.0f, 1.0f);
+            SoundHelper.playWorldSoundSafely(world, "entity.generic.explode", loc, 1.0f, 1.0f);
             world.createExplosion(loc, 0.0f, false, false); // No block damage
             
             // Spawn wind charge and particles
@@ -153,7 +154,7 @@ public class SheepBomb {
             
             // Immediate shear effect and visual
             sheep.setSheared(true);
-            world.playSound(loc, Sound.ENTITY_SHEEP_SHEAR, 1.0f, 1.0f);
+            SoundHelper.playWorldSoundSafely(world, "entity.sheep.shear", loc, 1.0f, 1.0f);
             world.spawnParticle(Particle.CLOUD, loc, 20, 0.2, 0.2, 0.2, 0);
             
             // Schedule poof effect after a short delay
@@ -179,12 +180,12 @@ public class SheepBomb {
                             
                             if (ticks % 10 == 0) { // Every half second
                                 world.spawnParticle(Particle.CLOUD, currentLoc, 5, 0.2, 0.2, 0.2, 0);
-                                world.playSound(currentLoc, Sound.ENTITY_SHEEP_AMBIENT, 0.5f, 1.5f);
+                                SoundHelper.playWorldSoundSafely(world, "entity.sheep.ambient", currentLoc, 0.5f, 1.5f);
                             }
 
                             if (ticks >= 20) { // After 1 second
                                 // Final poof
-                                world.playSound(currentLoc, Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+                                SoundHelper.playWorldSoundSafely(world, "entity.enderman.teleport", currentLoc, 1.0f, 1.0f);
                                 world.spawnParticle(Particle.CLOUD, currentLoc, 30, 0.3, 0.5, 0.3, 0.05);
                                 remove();
                                 this.cancel();
