@@ -5,7 +5,7 @@ import nc.randomEvents.services.RewardGenerator;
 import nc.randomEvents.services.RewardGenerator.Tier;
 import nc.randomEvents.services.RewardGenerator.TierQuantity;
 import nc.randomEvents.services.events.Event;
-import nc.randomEvents.utils.LocationUtils;
+import nc.randomEvents.utils.LocationHelper;
 import nc.randomEvents.utils.SoundHelper;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -66,7 +66,7 @@ public class QuestEvent implements Event, Listener {
         activeSessions.clear();
 
         // Group overworld players
-        Set<Set<Player>> playerGroups = LocationUtils.groupPlayers(overworldPlayers, GROUP_RADIUS);
+        Set<Set<Player>> playerGroups = LocationHelper.groupPlayers(overworldPlayers, GROUP_RADIUS);
         
         // Create a session for each valid group
         for (Set<Player> group : playerGroups) {
@@ -75,7 +75,7 @@ public class QuestEvent implements Event, Listener {
             // Single player case
             if (group.size() == 1) {
                 Player player = group.iterator().next();
-                targetLocation = LocationUtils.getPointAwayFrom(player.getLocation(), SINGLE_PLAYER_DISTANCE);
+                targetLocation = LocationHelper.getPointAwayFrom(player.getLocation(), SINGLE_PLAYER_DISTANCE);
             } else {
                 // Find the farthest pair of players
                 Player player1 = null;

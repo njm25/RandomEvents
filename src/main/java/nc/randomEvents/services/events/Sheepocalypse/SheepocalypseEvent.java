@@ -3,7 +3,7 @@ package nc.randomEvents.services.events.Sheepocalypse;
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.services.RewardGenerator;
 import nc.randomEvents.services.events.Event;
-import nc.randomEvents.utils.LocationUtils;
+import nc.randomEvents.utils.LocationHelper;
 import nc.randomEvents.utils.SoundHelper;
 
 import org.bukkit.Bukkit;
@@ -83,13 +83,13 @@ public class SheepocalypseEvent implements Event, Listener {
             }
 
             // Recalculate groups each tick to handle player movement
-            Set<Set<Player>> currentGroups = LocationUtils.groupPlayers(
+            Set<Set<Player>> currentGroups = LocationHelper.groupPlayers(
                 players.stream().filter(p -> p.isOnline() && !p.isDead()).collect(Collectors.toSet()),
                 GROUP_RADIUS
             );
 
             for (Set<Player> group : currentGroups) {
-                Location groupMidpoint = LocationUtils.findMidpoint(group);
+                Location groupMidpoint = LocationHelper.findMidpoint(group);
                 if (groupMidpoint == null) continue;
 
                 // Find the player farthest from the midpoint to calculate spawn radius
