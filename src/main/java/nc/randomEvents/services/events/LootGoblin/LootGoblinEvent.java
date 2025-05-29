@@ -21,11 +21,11 @@ import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
-import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
 import nc.randomEvents.utils.AttributeHelper;
+import nc.randomEvents.utils.MetadataHelper;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
@@ -35,10 +35,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class LootGoblinEvent implements Event, Listener {
     private final RandomEvents plugin;
     private final Random random = new Random();
-    private static final String LOOT_GOBLIN_METADATA_KEY = "loot_goblin";
-    private static final String STOLEN_ITEM_METADATA_KEY = "loot_goblin_stolen_item";
-    private static final String CRYING_METADATA_KEY = "loot_goblin_crying";
-    private final NamespacedKey goblinUniqueIdKey;
+    private static final String LOOT_GOBLIN_METADATA_KEY = MetadataHelper.METADATA_PREFIX + "loot_goblin";
+    private static final String STOLEN_ITEM_METADATA_KEY = MetadataHelper.METADATA_PREFIX + "loot_goblin_stolen_item";
+    private static final String CRYING_METADATA_KEY = MetadataHelper.METADATA_PREFIX + "loot_goblin_crying";
 
     private final Map<UUID, GoblinTask> activeGoblins = new ConcurrentHashMap<>(); // Zombie UUID to its task
     private static final int CHEST_SEARCH_RADIUS = 20;
@@ -75,7 +74,6 @@ public class LootGoblinEvent implements Event, Listener {
 
     public LootGoblinEvent(RandomEvents plugin) {
         this.plugin = plugin;
-        this.goblinUniqueIdKey = new NamespacedKey(plugin, "loot_goblin_uuid");
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
@@ -148,8 +146,7 @@ public class LootGoblinEvent implements Event, Listener {
             goblin.getEquipment().setItemInMainHandDropChance(0.0f); // Prevent dropping this 'nothing'
         }
 
-        goblin.getPersistentDataContainer().set(goblinUniqueIdKey, PersistentDataType.STRING, goblin.getUniqueId().toString());
-        goblin.setMetadata(LOOT_GOBLIN_METADATA_KEY, new FixedMetadataValue(plugin, true));
+        MetadataHelper.setMetadata(goblin, LOOT_GOBLIN_METADATA_KEY, true, plugin);
 
         // Make goblin completely passive
         goblin.setTarget(null);
@@ -197,15 +194,14 @@ public class LootGoblinEvent implements Event, Listener {
                !blockAtFeet.isLiquid() &&     // Not in liquid at feet
                !blockBelowFeet.isLiquid();    // Not standing on liquid source that looks solid (e.g. top of waterfall)
     }
-
     @EventHandler
     public void onEntityDeath(EntityDeathEvent event) {
         LivingEntity deadEntity = event.getEntity();
-        if (deadEntity.hasMetadata(LOOT_GOBLIN_METADATA_KEY)) {
+        if (MetadataHelper.hasMetadata(deadEntity, LOOT_GOBLIN_METADATA_KEY)) {
             event.getDrops().clear(); // Clear default zombie drops
 
-            if (deadEntity.hasMetadata(STOLEN_ITEM_METADATA_KEY)) {
-                ItemStack stolenItem = (ItemStack) deadEntity.getMetadata(STOLEN_ITEM_METADATA_KEY).get(0).value();
+            if (MetadataHelper.hasMetadata(deadEntity, STOLEN_ITEM_METADATA_KEY)) {
+                ItemStack stolenItem = (ItemStack) MetadataHelper.getMetadata(deadEntity, STOLEN_ITEM_METADATA_KEY).get(0).value();
                 if (stolenItem != null && stolenItem.getType() != Material.AIR) {
                     deadEntity.getWorld().dropItemNaturally(deadEntity.getLocation(), stolenItem);
                 }
@@ -215,18 +211,17 @@ public class LootGoblinEvent implements Event, Listener {
             deadEntity.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, deadEntity.getLocation().add(0, 0.5, 0), 30, 0.5, 0.5, 0.5, 0.1);
             cleanupGoblin(deadEntity.getUniqueId(), false);
         }
-    }
-    
+    }    
     @EventHandler
     public void onEntityCombust(EntityCombustEvent event) {
-        if (event.getEntity().hasMetadata(LOOT_GOBLIN_METADATA_KEY)) {
+        if (MetadataHelper.hasMetadata(event.getEntity(), LOOT_GOBLIN_METADATA_KEY)) {
             event.setCancelled(true); // Prevent loot goblins from burning in daylight
         }
     }
 
     @EventHandler
     public void onEntityDamage(EntityDamageByEntityEvent event) {
-        if (!(event.getEntity() instanceof LivingEntity && event.getEntity().hasMetadata(LOOT_GOBLIN_METADATA_KEY))) {
+        if (!(event.getEntity() instanceof LivingEntity && MetadataHelper.hasMetadata(event.getEntity(), LOOT_GOBLIN_METADATA_KEY))) {
             return;
         }
         LivingEntity livingEntity = (LivingEntity) event.getEntity();
@@ -239,20 +234,20 @@ public class LootGoblinEvent implements Event, Listener {
         event.setCancelled(true);
 
         // If already crying, ignore additional hits
-        if (livingEntity.hasMetadata(CRYING_METADATA_KEY)) return;
+        if (MetadataHelper.hasMetadata(livingEntity, CRYING_METADATA_KEY)) return;
 
         // Mark as crying
-        livingEntity.setMetadata(CRYING_METADATA_KEY, new FixedMetadataValue(plugin, true));
+        MetadataHelper.setMetadata(livingEntity, CRYING_METADATA_KEY, true, plugin);
 
         // Drop the item if carrying one
-        if (livingEntity.hasMetadata(STOLEN_ITEM_METADATA_KEY)) {
-            ItemStack stolenItem = (ItemStack) livingEntity.getMetadata(STOLEN_ITEM_METADATA_KEY).get(0).value();
+        if (MetadataHelper.hasMetadata(livingEntity, STOLEN_ITEM_METADATA_KEY)) {
+            ItemStack stolenItem = (ItemStack) MetadataHelper.getMetadata(livingEntity, STOLEN_ITEM_METADATA_KEY).get(0).value();
             if (stolenItem != null && stolenItem.getType() != Material.AIR) {
                 livingEntity.getWorld().dropItemNaturally(livingEntity.getLocation(), stolenItem);
                 if (livingEntity.getEquipment() != null) { // Null check for equipment
                     livingEntity.getEquipment().setItemInMainHand(new ItemStack(Material.AIR));
                 }
-                livingEntity.removeMetadata(STOLEN_ITEM_METADATA_KEY, plugin);
+                MetadataHelper.removeMetadata(livingEntity, STOLEN_ITEM_METADATA_KEY, plugin);
             }
         }
 
@@ -295,7 +290,7 @@ public class LootGoblinEvent implements Event, Listener {
 
     @EventHandler
     public void onGoblinTargetPlayer(EntityTargetLivingEntityEvent event) {
-        if (event.getEntity().hasMetadata(LOOT_GOBLIN_METADATA_KEY)) {
+        if (MetadataHelper.hasMetadata(event.getEntity(), LOOT_GOBLIN_METADATA_KEY)) {
             if (event.getTarget() instanceof Player) {
                 // Prevent the Loot Goblin from targeting players
                 event.setCancelled(true);
@@ -446,7 +441,7 @@ public class LootGoblinEvent implements Event, Listener {
                     if (notRemoved.isEmpty()){ // Successfully removed
                         carriedItem = stolen; // Use the 'stolen' item which is already a clone
                         goblin.getEquipment().setItemInMainHand(carriedItem);
-                        goblin.setMetadata(STOLEN_ITEM_METADATA_KEY, new FixedMetadataValue(plugin, carriedItem));
+                        MetadataHelper.setMetadata(goblin, STOLEN_ITEM_METADATA_KEY, carriedItem, plugin);
                         String itemDesc = stolen.getAmount() > 1 ?
                             stolen.getAmount() + " " + stolen.getType().toString().toLowerCase().replace('_', ' ') :
                             "a " + stolen.getType().toString().toLowerCase().replace('_', ' ');

@@ -5,7 +5,8 @@ import nc.randomEvents.services.RewardGenerator;
 import nc.randomEvents.services.RewardGenerator.Tier;
 import nc.randomEvents.services.RewardGenerator.TierQuantity;
 import nc.randomEvents.services.events.Event;
-import nc.randomEvents.utils.LocationUtils;
+import nc.randomEvents.utils.LocationHelper;
+import nc.randomEvents.utils.MetadataHelper;
 import nc.randomEvents.utils.SoundHelper;
 
 import org.bukkit.Bukkit;
@@ -55,11 +56,11 @@ public class MeteorEvent implements Event, Listener {
     @Override
     public void execute(Set<Player> players) {
         // Group players within 100 blocks of each other
-        Set<Set<Player>> playerGroups = LocationUtils.groupPlayers(players, GROUP_RADIUS);
+        Set<Set<Player>> playerGroups = LocationHelper.groupPlayers(players, GROUP_RADIUS);
 
         for (Set<Player> group : playerGroups) {
             // Find the midpoint of this group
-            Location groupMidpoint = LocationUtils.findMidpoint(group);
+            Location groupMidpoint = LocationHelper.findMidpoint(group);
             if (groupMidpoint == null) continue;
 
             // Calculate total meteors based on group size
@@ -110,7 +111,7 @@ public class MeteorEvent implements Event, Listener {
         fireball.setYield(0.0F);
         fireball.setIsIncendiary(false);
         fireball.setShooter(null);
-        fireball.setMetadata(METEOR_METADATA_KEY, new FixedMetadataValue(plugin, true));
+        MetadataHelper.setMetadata(fireball, METEOR_METADATA_KEY, true, plugin);
     }
 
     @EventHandler
@@ -119,12 +120,12 @@ public class MeteorEvent implements Event, Listener {
             return;
         }
         Fireball fireball = (Fireball) event.getEntity();
-        if (!fireball.hasMetadata(METEOR_METADATA_KEY)) {
+        if (!MetadataHelper.hasMetadata(fireball, METEOR_METADATA_KEY)) {
             return;
         }
 
         // Remove metadata to prevent processing this fireball again if event somehow re-fires.
-        fireball.removeMetadata(METEOR_METADATA_KEY, plugin);
+        MetadataHelper.removeMetadata(fireball, METEOR_METADATA_KEY, plugin);
 
         // Check if it hit a block (not an entity)
         if (event.getHitBlock() != null) {

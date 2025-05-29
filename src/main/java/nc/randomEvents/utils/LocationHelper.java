@@ -5,7 +5,7 @@ import org.bukkit.entity.Player;
 
 import java.util.*;
 
-public class LocationUtils {
+public class LocationHelper {
 
     /**
      * Finds the exact 3D midpoint of a set of players' locations.
