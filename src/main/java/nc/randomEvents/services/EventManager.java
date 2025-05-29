@@ -7,6 +7,7 @@ import nc.randomEvents.services.events.Meteor.MeteorEvent;
 import nc.randomEvents.services.events.Quest.QuestEvent;
 import nc.randomEvents.services.events.Sheepocalypse.SheepocalypseEvent;
 import nc.randomEvents.services.events.Sound.SoundEvent;
+import nc.randomEvents.services.events.Test.TestEvent;
 import nc.randomEvents.services.events.ZombieHoard.ZombieHoardEvent;
 
 import org.bukkit.Bukkit;
@@ -37,6 +38,7 @@ public class EventManager {
         addEvent(new ZombieHoardEvent(plugin));
         addEvent(new QuestEvent(plugin));
         addEvent(new SheepocalypseEvent(plugin));
+        addEvent(new TestEvent(plugin));
         // Register other events here
     }
 
