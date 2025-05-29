@@ -2,6 +2,7 @@ package nc.randomEvents.services.events.LootGoblin;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.services.events.Event;
+import nc.randomEvents.utils.SoundHelper;
 
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -164,7 +165,7 @@ public class LootGoblinEvent implements Event, Listener {
         player.sendMessage(Component.text("You hear a faint giggle... a ", NamedTextColor.YELLOW)
             .append(Component.text("Loot Goblin", NamedTextColor.GOLD))
             .append(Component.text(" has appeared nearby!", NamedTextColor.YELLOW)));
-        world.playSound(goblin.getLocation(), Sound.ENTITY_PIGLIN_JEALOUS, SoundCategory.HOSTILE, 1.0f, 1.5f);
+        SoundHelper.playWorldSoundSafely(world, "entity.piglin.jealous", goblin.getLocation(), 1.0f, 1.5f);
 
         GoblinTask task = new GoblinTask(goblin, player);
         activeGoblins.put(goblin.getUniqueId(), task);
@@ -210,7 +211,7 @@ public class LootGoblinEvent implements Event, Listener {
                 }
             }
             // Victory sound/particle
-            deadEntity.getWorld().playSound(deadEntity.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.2f);
+            SoundHelper.playWorldSoundSafely(deadEntity.getWorld(), "entity.player.levelup", deadEntity.getLocation(), 1.0f, 1.2f);
             deadEntity.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, deadEntity.getLocation().add(0, 0.5, 0), 30, 0.5, 0.5, 0.5, 0.1);
             cleanupGoblin(deadEntity.getUniqueId(), false);
         }
@@ -258,7 +259,7 @@ public class LootGoblinEvent implements Event, Listener {
         // Play crying effects
         Location loc = livingEntity.getLocation();
         World world = livingEntity.getWorld();
-        world.playSound(loc, Sound.ENTITY_DOLPHIN_DEATH, 1.0f, 2.0f); // High-pitched sad sound
+        SoundHelper.playWorldSoundSafely(world, "entity.dolphin.death", loc, 1.0f, 2.0f); // High-pitched sad sound
         Location particleLoc = loc.clone().add(0, 1.5, 0);
         world.spawnParticle(Particle.CLOUD, particleLoc.getX(), particleLoc.getY(), particleLoc.getZ(), 20, 0.2, 0.2, 0.2, 0);
 
@@ -277,13 +278,13 @@ public class LootGoblinEvent implements Event, Listener {
                     // Continue crying effects
                     Location currentParticleLoc = livingEntity.getLocation().add(0, 1.5, 0);
                     world.spawnParticle(Particle.CLOUD, currentParticleLoc.getX(), currentParticleLoc.getY(), currentParticleLoc.getZ(), 5, 0.2, 0.2, 0.2, 0);
-                    world.playSound(livingEntity.getLocation(), Sound.ENTITY_DOLPHIN_HURT, 0.5f, 2.0f);
+                    SoundHelper.playWorldSoundSafely(world, "entity.dolphin.hurt", livingEntity.getLocation(), 0.5f, 2.0f);
                 }
 
                 if (ticks >= 60) { // After 3 seconds
                     // Final disappearance
                     Location finalParticleLoc = livingEntity.getLocation().add(0, 1, 0);
-                    world.playSound(livingEntity.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+                    SoundHelper.playWorldSoundSafely(world, "entity.enderman.teleport", livingEntity.getLocation(), 1.0f, 1.0f);
                     world.spawnParticle(Particle.CLOUD, finalParticleLoc.getX(), finalParticleLoc.getY(), finalParticleLoc.getZ(), 30, 0.3, 0.5, 0.3, 0.05);
                     cleanupGoblin(livingEntity.getUniqueId(), true);
                     this.cancel();
@@ -309,7 +310,7 @@ public class LootGoblinEvent implements Event, Listener {
             PigZombie goblinEntity = task.goblin; // Changed type
             if (goblinEntity != null && goblinEntity.isValid()) {
                 if (withEscapeEffect && !goblinEntity.hasMetadata(CRYING_METADATA_KEY)) {
-                    goblinEntity.getWorld().playSound(goblinEntity.getLocation(), Sound.ENTITY_FOX_TELEPORT, 1.0f, 1.0f);
+                    SoundHelper.playWorldSoundSafely(goblinEntity.getWorld(), "entity.fox.teleport", goblinEntity.getLocation(), 1.0f, 1.0f);
                     Location escapeParticleLoc = goblinEntity.getLocation().add(0, 1, 0);
                     goblinEntity.getWorld().spawnParticle(Particle.CLOUD, escapeParticleLoc.getX(), escapeParticleLoc.getY(), escapeParticleLoc.getZ(), 20, 0.3, 0.3, 0.3, 0.05);
                 }
@@ -372,7 +373,7 @@ public class LootGoblinEvent implements Event, Listener {
             if (targetChest == null && !hasReachedChest) {
                 targetChest = findNearbyChest(goblin.getLocation(), CHEST_SEARCH_RADIUS);
                 if (targetChest != null) {
-                    goblin.getWorld().playSound(goblin.getLocation(), Sound.ENTITY_PIGLIN_ADMIRING_ITEM, 1.0f, 1.5f);
+                    SoundHelper.playWorldSoundSafely(goblin.getWorld(), "entity.piglin.admiring_item", goblin.getLocation(), 1.0f, 1.5f);
                 } else {
                     // If no chest found, start fleeing
                     isFleeing = true;
@@ -450,7 +451,7 @@ public class LootGoblinEvent implements Event, Listener {
                             stolen.getAmount() + " " + stolen.getType().toString().toLowerCase().replace('_', ' ') :
                             "a " + stolen.getType().toString().toLowerCase().replace('_', ' ');
                         initialPlayerTarget.sendMessage(Component.text("The Loot Goblin stole " + itemDesc + " from a chest!", NamedTextColor.RED));
-                        goblin.getWorld().playSound(goblin.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1.0f, 1.2f);
+                        SoundHelper.playWorldSoundSafely(goblin.getWorld(), "entity.item.pickup", goblin.getLocation(), 1.0f, 1.2f);
                     } else {
                         // Failed to remove (e.g. item changed by another player), goblin gives up on this chest
                         initialPlayerTarget.sendMessage(Component.text("The Loot Goblin fumbled with the chest and gave up!", NamedTextColor.YELLOW));
