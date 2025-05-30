@@ -3,9 +3,7 @@ package nc.randomEvents.services.events.Test;
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.services.events.Event;
 import nc.randomEvents.services.EquipmentManager;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.*;

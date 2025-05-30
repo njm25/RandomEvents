@@ -2,8 +2,6 @@ package nc.randomEvents.services;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.utils.MetadataHelper;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -12,12 +10,10 @@ import java.util.*;
 
 public class EquipmentManager {
     private final RandomEvents plugin;
-    private final Map<String, Map<UUID, StoredEquipment>> storedEquipment;
     private static final String EQUIPMENT_METADATA_PREFIX = "equipment_";
 
     public EquipmentManager(RandomEvents plugin) {
         this.plugin = plugin;
-        this.storedEquipment = new HashMap<>();
     }
 
     /**
