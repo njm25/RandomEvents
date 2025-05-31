@@ -25,8 +25,8 @@ public final class RandomEvents extends JavaPlugin {
         dataManager = new DataManager(this);
         rewardGenerator = new RewardGenerator(this);
         equipmentManager = new EquipmentManager(this);
-        eventManager = new EventManager(this, dataManager);
-        new CommandManager(this, eventManager);
+        eventManager = new EventManager(this);
+        new CommandManager(this);
         
         getLogger().info("RandomEvents has been enabled!");
     }

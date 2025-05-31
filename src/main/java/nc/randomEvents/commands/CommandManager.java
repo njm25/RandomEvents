@@ -21,10 +21,10 @@ public class CommandManager implements CommandExecutor, TabCompleter {
     private final Map<String, SubCommand> subCommands = new HashMap<>();
     private final List<String> subCommandNames = new ArrayList<>();
 
-    public CommandManager(RandomEvents plugin, EventManager eventManager) {
+    public CommandManager(RandomEvents plugin) {
         // Register subcommands
         registerSubCommand("Help", new HelpCommand(plugin, subCommands));
-        registerSubCommand("Start", new StartEventCommand(plugin, eventManager));
+        registerSubCommand("Start", new StartEventCommand(plugin));
         registerSubCommand("AddWorld", new AddWorldCommand(plugin));
         registerSubCommand("RemoveWorld", new RemoveWorldCommand(plugin));
         registerSubCommand("Reload", new ReloadCommand(plugin));

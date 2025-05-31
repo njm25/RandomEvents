@@ -23,11 +23,9 @@ import java.util.stream.Collectors;
 public class EventManager {
     private final Map<String, Event> events = new HashMap<>();
     private final RandomEvents plugin;
-    private final DataManager dataManager;
 
-    public EventManager(RandomEvents plugin, DataManager dataManager) {
+    public EventManager(RandomEvents plugin) {
         this.plugin = plugin;
-        this.dataManager = dataManager;
         registerEvents();
     }
 
@@ -49,7 +47,7 @@ public class EventManager {
     public boolean startEvent(String eventName) {
         Event event = events.get(eventName.toLowerCase());
         if (event != null) {
-            List<String> acceptedWorlds = dataManager.getAcceptedWorlds();
+            List<String> acceptedWorlds = plugin.getDataManager().getAcceptedWorlds();
             if (acceptedWorlds.isEmpty()) {
                 plugin.getLogger().info("No accepted worlds configured. Event '" + eventName + "' will not run. Use /randomevents addworld <worldname>");
                 return false;
