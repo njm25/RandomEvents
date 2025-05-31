@@ -1,7 +1,7 @@
-package nc.randomEvents.services.events.Test;
+package nc.randomEvents.events.Test;
 
 import nc.randomEvents.RandomEvents;
-import nc.randomEvents.services.events.Event;
+import nc.randomEvents.events.Event;
 import nc.randomEvents.services.EquipmentManager;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -35,8 +35,6 @@ public class TestEvent implements Event {
 
     @Override
     public void execute(Set<Player> players) {
-        // Start the session before giving out items
-        equipmentManager.startSession(SESSION_ID);
         
         for (Player player : players) {
             if (!player.isOnline() || player.isDead()) continue;

@@ -1,4 +1,4 @@
-package nc.randomEvents.services.events.Quest;
+package nc.randomEvents.events.Quest;
 
 import org.bukkit.Location;
 import org.bukkit.entity.Player;

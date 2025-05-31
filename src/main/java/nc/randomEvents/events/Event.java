@@ -1,4 +1,4 @@
-package nc.randomEvents.services.events;
+package nc.randomEvents.events;
 
 import org.bukkit.entity.Player;
 

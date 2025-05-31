@@ -1,15 +1,9 @@
 package nc.randomEvents.services;
 
 import nc.randomEvents.RandomEvents;
-import nc.randomEvents.services.events.Event;
-import nc.randomEvents.services.events.LootGoblin.LootGoblinEvent;
-import nc.randomEvents.services.events.Meteor.MeteorEvent;
-import nc.randomEvents.services.events.Quest.QuestEvent;
-import nc.randomEvents.services.events.Sheepocalypse.SheepocalypseEvent;
-import nc.randomEvents.services.events.Sound.SoundEvent;
-import nc.randomEvents.services.events.Test.TestEvent;
-import nc.randomEvents.services.events.ZombieHoard.ZombieHoardEvent;
-
+import nc.randomEvents.core.BaseEvent;
+import nc.randomEvents.core.EventSession;
+import nc.randomEvents.events.Test2.Test2Event;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -21,31 +15,27 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class EventManager {
-    private final Map<String, Event> events = new HashMap<>();
+    private final Map<String, BaseEvent> events = new HashMap<>();
     private final RandomEvents plugin;
+    private final SessionRegistry sessionRegistry;
 
     public EventManager(RandomEvents plugin) {
         this.plugin = plugin;
+        this.sessionRegistry = plugin.getSessionRegistry();
         registerEvents();
     }
 
     private void registerEvents() {
-        addEvent(new SoundEvent());
-        addEvent(new MeteorEvent(plugin));
-        addEvent(new LootGoblinEvent(plugin));
-        addEvent(new ZombieHoardEvent(plugin));
-        addEvent(new QuestEvent(plugin));
-        addEvent(new SheepocalypseEvent(plugin));
-        addEvent(new TestEvent(plugin));
-        // Register other events here
+        // For now, only register our new test event
+        addEvent(new Test2Event(plugin));
     }
 
-    public void addEvent(Event event) {
+    public void addEvent(BaseEvent event) {
         events.put(event.getName().toLowerCase(), event);
     }
 
     public boolean startEvent(String eventName) {
-        Event event = events.get(eventName.toLowerCase());
+        BaseEvent event = events.get(eventName.toLowerCase());
         if (event != null) {
             List<String> acceptedWorlds = plugin.getDataManager().getAcceptedWorlds();
             if (acceptedWorlds.isEmpty()) {
@@ -61,7 +51,10 @@ public class EventManager {
                 plugin.getLogger().info("No players online in accepted worlds to start event: " + eventName);
                 return false;
             }
-            event.execute(playersInAcceptedWorlds);
+
+            // Create and start a new session
+            new EventSession(plugin, event, playersInAcceptedWorlds);
+
             plugin.getLogger().info("Started event: " + eventName + " for players in accepted worlds: " + String.join(", ", acceptedWorlds));
             return true;
         } else {
@@ -72,5 +65,13 @@ public class EventManager {
 
     public List<String> getEventNames() {
         return new ArrayList<>(events.keySet());
+    }
+
+
+    /**
+     * Clean up all running sessions when the plugin is disabled
+     */
+    public void shutdown() {
+        sessionRegistry.endAll();
     }
 }

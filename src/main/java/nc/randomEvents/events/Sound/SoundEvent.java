@@ -1,8 +1,8 @@
-package nc.randomEvents.services.events.Sound;
+package nc.randomEvents.events.Sound;
 
 import org.bukkit.entity.Player;
 
-import nc.randomEvents.services.events.Event;
+import nc.randomEvents.events.Event;
 import nc.randomEvents.utils.SoundHelper;
 
 import java.util.Set;
