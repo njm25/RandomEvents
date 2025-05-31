@@ -1,8 +1,8 @@
-package nc.randomEvents.services.events.Sheepocalypse;
+package nc.randomEvents.events.Sheepocalypse;
 
 import nc.randomEvents.RandomEvents;
+import nc.randomEvents.events.Event;
 import nc.randomEvents.services.RewardGenerator;
-import nc.randomEvents.services.events.Event;
 import nc.randomEvents.utils.LocationHelper;
 import nc.randomEvents.utils.SoundHelper;
 

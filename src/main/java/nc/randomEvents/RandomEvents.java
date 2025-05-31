@@ -6,6 +6,7 @@ import nc.randomEvents.commands.CommandManager;
 import nc.randomEvents.services.DataManager;
 import nc.randomEvents.services.EventManager;
 import nc.randomEvents.services.RewardGenerator;
+import nc.randomEvents.services.SessionRegistry;
 import nc.randomEvents.utils.Metrics;
 import nc.randomEvents.services.ConfigManager;
 import nc.randomEvents.services.EquipmentManager;
@@ -17,7 +18,7 @@ public final class RandomEvents extends JavaPlugin {
     private RewardGenerator rewardGenerator;
     private ConfigManager configManager;
     private EquipmentManager equipmentManager;
-    
+    private SessionRegistry sessionRegistry;
     @Override
     public void onEnable() {
         new Metrics(this, 26005);
@@ -27,6 +28,7 @@ public final class RandomEvents extends JavaPlugin {
         equipmentManager = new EquipmentManager(this);
         eventManager = new EventManager(this);
         new CommandManager(this);
+        sessionRegistry = new SessionRegistry(this);
         
         getLogger().info("RandomEvents has been enabled!");
     }
@@ -55,4 +57,9 @@ public final class RandomEvents extends JavaPlugin {
     public EquipmentManager getEquipmentManager() {
         return equipmentManager;
     }
+
+    public SessionRegistry getSessionRegistry() {
+        return sessionRegistry;
+    }
+    
 }

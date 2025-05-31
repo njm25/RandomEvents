@@ -1,10 +1,10 @@
-package nc.randomEvents.services.events.Meteor;
+package nc.randomEvents.events.Meteor;
 
 import nc.randomEvents.RandomEvents;
+import nc.randomEvents.events.Event;
 import nc.randomEvents.services.RewardGenerator;
 import nc.randomEvents.services.RewardGenerator.Tier;
 import nc.randomEvents.services.RewardGenerator.TierQuantity;
-import nc.randomEvents.services.events.Event;
 import nc.randomEvents.utils.LocationHelper;
 import nc.randomEvents.utils.MetadataHelper;
 import nc.randomEvents.utils.SoundHelper;

@@ -4,7 +4,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import nc.randomEvents.RandomEvents;
-import nc.randomEvents.services.events.Event;
+import nc.randomEvents.events.Event;
 
 import java.io.File;
 import java.io.InputStream;

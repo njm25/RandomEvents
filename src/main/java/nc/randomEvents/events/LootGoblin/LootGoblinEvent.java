@@ -1,7 +1,7 @@
-package nc.randomEvents.services.events.LootGoblin;
+package nc.randomEvents.events.LootGoblin;
 
 import nc.randomEvents.RandomEvents;
-import nc.randomEvents.services.events.Event;
+import nc.randomEvents.events.Event;
 import nc.randomEvents.utils.SoundHelper;
 
 import org.bukkit.*;
