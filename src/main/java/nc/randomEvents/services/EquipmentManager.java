@@ -5,6 +5,7 @@ import nc.randomEvents.utils.PersistentDataHelper;
 import org.bukkit.*;
 import org.bukkit.block.*;
 import org.bukkit.entity.*;
+import org.bukkit.entity.minecart.HopperMinecart;
 import org.bukkit.entity.minecart.StorageMinecart;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -176,6 +177,34 @@ public class EquipmentManager implements Listener {
         // Clean up items in player inventories
         for (Player player : plugin.getServer().getOnlinePlayers()) {
             cleanupPlayerInventory(player, sessionId);
+            
+            // Check player's cursor
+            ItemStack cursorItem = player.getItemOnCursor();
+            if (cursorItem != null) {
+                String cursorSessionId = getEventSessionId(cursorItem);
+                if (cursorSessionId != null && !activeSessions.contains(cursorSessionId)) {
+                    player.setItemOnCursor(null);
+                } else if (cursorItem.getType().name().contains("SHULKER_BOX")) {
+                    cleanupShulkerBox(cursorItem, cursorSessionId);
+                }
+            }
+
+            // Check any open inventory
+            if (player.getOpenInventory() != null) {
+                Inventory topInventory = player.getOpenInventory().getTopInventory();
+                if (topInventory != null) {
+                    for (ItemStack item : topInventory.getContents()) {
+                        if (item != null) {
+                            String itemSessionId = getEventSessionId(item);
+                            if (itemSessionId != null && !activeSessions.contains(itemSessionId)) {
+                                topInventory.remove(item);
+                            } else if (item.getType().name().contains("SHULKER_BOX")) {
+                                cleanupShulkerBox(item, itemSessionId);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // Clean up items in the world
@@ -207,6 +236,13 @@ public class EquipmentManager implements Listener {
             Item item = (Item) entity;
             if (isEventEquipment(item.getItemStack(), sessionId)) {
                 item.remove();
+            } else {
+                // Check if it's a shulker box
+                ItemStack itemStack = item.getItemStack();
+                if (itemStack.getType().name().contains("SHULKER_BOX")) {
+                    cleanupShulkerBox(itemStack, sessionId);
+                    item.setItemStack(itemStack);
+                }
             }
         } else if (entity instanceof LivingEntity) {
             LivingEntity living = (LivingEntity) entity;
@@ -215,12 +251,16 @@ public class EquipmentManager implements Listener {
                 ItemStack mainHand = living.getEquipment().getItemInMainHand();
                 if (isEventEquipment(mainHand, sessionId)) {
                     living.getEquipment().setItemInMainHand(null);
+                } else if (mainHand != null && mainHand.getType().name().contains("SHULKER_BOX")) {
+                    cleanupShulkerBox(mainHand, sessionId);
                 }
 
                 // Clean off hand
                 ItemStack offHand = living.getEquipment().getItemInOffHand();
                 if (isEventEquipment(offHand, sessionId)) {
                     living.getEquipment().setItemInOffHand(null);
+                } else if (offHand != null && offHand.getType().name().contains("SHULKER_BOX")) {
+                    cleanupShulkerBox(offHand, sessionId);
                 }
 
                 // Clean armor
@@ -230,6 +270,8 @@ public class EquipmentManager implements Listener {
                     if (isEventEquipment(item, sessionId)) {
                         hasEventArmor = true;
                         break;
+                    } else if (item != null && item.getType().name().contains("SHULKER_BOX")) {
+                        cleanupShulkerBox(item, sessionId);
                     }
                 }
                 if (hasEventArmor) {
@@ -238,8 +280,13 @@ public class EquipmentManager implements Listener {
             }
         } else if (entity instanceof ItemFrame) {
             ItemFrame frame = (ItemFrame) entity;
-            if (isEventEquipment(frame.getItem(), sessionId)) {
-                frame.setItem(null);
+            ItemStack frameItem = frame.getItem();
+            if (frameItem != null) {
+                if (isEventEquipment(frameItem, sessionId)) {
+                    frame.setItem(null);
+                } else if (frameItem.getType().name().contains("SHULKER_BOX")) {
+                    cleanupShulkerBox(frameItem, sessionId);
+                }
             }
         } else if (entity instanceof ArmorStand) {
             ArmorStand stand = (ArmorStand) entity;
@@ -250,6 +297,8 @@ public class EquipmentManager implements Listener {
                 if (isEventEquipment(item, sessionId)) {
                     hasEventArmor = true;
                     break;
+                } else if (item != null && item.getType().name().contains("SHULKER_BOX")) {
+                    cleanupShulkerBox(item, sessionId);
                 }
             }
             if (hasEventArmor) {
@@ -259,6 +308,9 @@ public class EquipmentManager implements Listener {
             if (entity instanceof StorageMinecart) {
                 StorageMinecart minecart = (StorageMinecart) entity;
                 cleanupInventory(minecart.getInventory(), sessionId);
+            } else if (entity instanceof HopperMinecart) {
+                HopperMinecart hopperMinecart = (HopperMinecart) entity;
+                cleanupInventory(hopperMinecart.getInventory(), sessionId);
             }
         } else if (entity instanceof Boat) {
             if (entity instanceof ChestBoat) {
@@ -269,6 +321,16 @@ public class EquipmentManager implements Listener {
             if (entity instanceof ChestedHorse) {
                 ChestedHorse horse = (ChestedHorse) entity;
                 cleanupInventory(horse.getInventory(), sessionId);
+            }
+        } else if (entity instanceof Llama) {
+            Llama llama = (Llama) entity;
+            if (llama.isCarryingChest()) {
+                cleanupInventory(llama.getInventory(), sessionId);
+            }
+        } else if (entity instanceof Donkey) {
+            Donkey donkey = (Donkey) entity;
+            if (donkey.isCarryingChest()) {
+                cleanupInventory(donkey.getInventory(), sessionId);
             }
         }
     }
@@ -298,8 +360,10 @@ public class EquipmentManager implements Listener {
             }
         } else if (blockState instanceof Jukebox) {
             Jukebox jukebox = (Jukebox) blockState;
-            if (isEventEquipment(jukebox.getRecord(), sessionId)) {
+            ItemStack record = jukebox.getRecord();
+            if (record != null && isEventEquipment(record, sessionId)) {
                 jukebox.setRecord(null);
+                jukebox.update();
             }
         } else if (blockState instanceof Campfire) {
             Campfire campfire = (Campfire) blockState;
@@ -337,17 +401,25 @@ public class EquipmentManager implements Listener {
                 if (isEventEquipment(item, sessionId)) {
                     inventory.remove(item);
                 } else if (item.getType().name().contains("SHULKER_BOX")) {
-                    // Check inside shulker boxes
-                    if (item.getItemMeta() instanceof BlockStateMeta) {
-                        BlockStateMeta meta = (BlockStateMeta) item.getItemMeta();
-                        if (meta.getBlockState() instanceof ShulkerBox) {
-                            ShulkerBox shulker = (ShulkerBox) meta.getBlockState();
-                            cleanupInventory(shulker.getInventory(), sessionId);
-                            meta.setBlockState(shulker);
-                            item.setItemMeta(meta);
-                        }
+                    cleanupShulkerBox(item, sessionId);
+                }
+            }
+        }
+    }
+
+    private void cleanupShulkerBox(ItemStack shulkerBox, String sessionId) {
+        if (shulkerBox.getItemMeta() instanceof BlockStateMeta) {
+            BlockStateMeta meta = (BlockStateMeta) shulkerBox.getItemMeta();
+            if (meta.getBlockState() instanceof ShulkerBox) {
+                ShulkerBox shulker = (ShulkerBox) meta.getBlockState();
+                // Only remove event items, keep other items
+                for (ItemStack item : shulker.getInventory().getContents()) {
+                    if (item != null && isEventEquipment(item, sessionId)) {
+                        shulker.getInventory().remove(item);
                     }
                 }
+                meta.setBlockState(shulker);
+                shulkerBox.setItemMeta(meta);
             }
         }
     }
@@ -360,29 +432,45 @@ public class EquipmentManager implements Listener {
     private void cleanupPlayerInventory(Player player, String sessionId) {
         // Clean main inventory
         for (ItemStack item : player.getInventory().getContents()) {
-            if (item != null && isEventEquipment(item, sessionId)) {
-                player.getInventory().remove(item);
+            if (item != null) {
+                if (isEventEquipment(item, sessionId)) {
+                    player.getInventory().remove(item);
+                } else if (item.getType().name().contains("SHULKER_BOX")) {
+                    cleanupShulkerBox(item, sessionId);
+                }
             }
         }
 
         // Clean armor
         for (ItemStack item : player.getInventory().getArmorContents()) {
-            if (item != null && isEventEquipment(item, sessionId)) {
-                player.getInventory().setArmorContents(null);
-                break;
+            if (item != null) {
+                if (isEventEquipment(item, sessionId)) {
+                    player.getInventory().setArmorContents(null);
+                    break;
+                } else if (item.getType().name().contains("SHULKER_BOX")) {
+                    cleanupShulkerBox(item, sessionId);
+                }
             }
         }
 
         // Clean offhand
         ItemStack offhand = player.getInventory().getItemInOffHand();
-        if (offhand != null && isEventEquipment(offhand, sessionId)) {
-            player.getInventory().setItemInOffHand(null);
+        if (offhand != null) {
+            if (isEventEquipment(offhand, sessionId)) {
+                player.getInventory().setItemInOffHand(null);
+            } else if (offhand.getType().name().contains("SHULKER_BOX")) {
+                cleanupShulkerBox(offhand, sessionId);
+            }
         }
 
         // Clean ender chest
         for (ItemStack item : player.getEnderChest().getContents()) {
-            if (item != null && isEventEquipment(item, sessionId)) {
-                player.getEnderChest().remove(item);
+            if (item != null) {
+                if (isEventEquipment(item, sessionId)) {
+                    player.getEnderChest().remove(item);
+                } else if (item.getType().name().contains("SHULKER_BOX")) {
+                    cleanupShulkerBox(item, sessionId);
+                }
             }
         }
     }
@@ -448,26 +536,52 @@ public class EquipmentManager implements Listener {
         ItemStack hotbarItem = event.getHotbarButton() != -1 ? 
             player.getInventory().getItem(event.getHotbarButton()) : null;
         
-        String clickedSessionId = clickedItem != null ? getEventSessionId(clickedItem) : null;
-        String cursorSessionId = cursorItem != null ? getEventSessionId(cursorItem) : null;
-        String hotbarSessionId = hotbarItem != null ? getEventSessionId(hotbarItem) : null;
-        
-        if (clickedSessionId != null && !activeSessions.contains(clickedSessionId)) {
-            event.setCancelled(true);
-            if (clickedItem != null) {
+        // Check clicked item
+        if (clickedItem != null) {
+            String clickedSessionId = getEventSessionId(clickedItem);
+            if (clickedSessionId != null && !activeSessions.contains(clickedSessionId)) {
+                event.setCancelled(true);
                 event.getInventory().remove(clickedItem);
+            } else if (clickedItem.getType().name().contains("SHULKER_BOX")) {
+                cleanupShulkerBox(clickedItem, clickedSessionId);
             }
         }
-        if (cursorSessionId != null && !activeSessions.contains(cursorSessionId)) {
-            event.setCancelled(true);
-            if (cursorItem != null) {
+
+        // Check cursor item
+        if (cursorItem != null) {
+            String cursorSessionId = getEventSessionId(cursorItem);
+            if (cursorSessionId != null && !activeSessions.contains(cursorSessionId)) {
+                event.setCancelled(true);
                 event.getInventory().remove(cursorItem);
+                player.setItemOnCursor(null);
+            } else if (cursorItem.getType().name().contains("SHULKER_BOX")) {
+                cleanupShulkerBox(cursorItem, cursorSessionId);
             }
         }
-        if (hotbarSessionId != null && !activeSessions.contains(hotbarSessionId)) {
-            event.setCancelled(true);
-            if (hotbarItem != null) {
+
+        // Check hotbar item
+        if (hotbarItem != null) {
+            String hotbarSessionId = getEventSessionId(hotbarItem);
+            if (hotbarSessionId != null && !activeSessions.contains(hotbarSessionId)) {
+                event.setCancelled(true);
                 event.getInventory().remove(hotbarItem);
+            } else if (hotbarItem.getType().name().contains("SHULKER_BOX")) {
+                cleanupShulkerBox(hotbarItem, hotbarSessionId);
+            }
+        }
+
+        // Check top inventory (crafting table, anvil, etc.)
+        Inventory topInventory = event.getView().getTopInventory();
+        if (topInventory != null) {
+            for (ItemStack item : topInventory.getContents()) {
+                if (item != null) {
+                    String itemSessionId = getEventSessionId(item);
+                    if (itemSessionId != null && !activeSessions.contains(itemSessionId)) {
+                        topInventory.remove(item);
+                    } else if (item.getType().name().contains("SHULKER_BOX")) {
+                        cleanupShulkerBox(item, itemSessionId);
+                    }
+                }
             }
         }
     }
@@ -572,6 +686,55 @@ public class EquipmentManager implements Listener {
         if (offHandSessionId != null && !activeSessions.contains(offHandSessionId)) {
             event.setCancelled(true);
             event.getPlayer().getInventory().setItemInMainHand(null);
+        }
+    }
+
+    @EventHandler
+    public void onInventoryClose(InventoryCloseEvent event) {
+        if (!(event.getPlayer() instanceof Player)) return;
+        
+        Player player = (Player) event.getPlayer();
+        Inventory topInventory = event.getView().getTopInventory();
+        
+        // Check top inventory (crafting table, anvil, etc.)
+        if (topInventory != null) {
+            for (ItemStack item : topInventory.getContents()) {
+                if (item != null) {
+                    String itemSessionId = getEventSessionId(item);
+                    if (itemSessionId != null && !activeSessions.contains(itemSessionId)) {
+                        topInventory.remove(item);
+                    } else if (item.getType().name().contains("SHULKER_BOX")) {
+                        cleanupShulkerBox(item, itemSessionId);
+                    }
+                }
+            }
+        }
+
+        // Check cursor item
+        ItemStack cursorItem = player.getItemOnCursor();
+        if (cursorItem != null) {
+            String cursorSessionId = getEventSessionId(cursorItem);
+            if (cursorSessionId != null && !activeSessions.contains(cursorSessionId)) {
+                player.setItemOnCursor(null);
+            } else if (cursorItem.getType().name().contains("SHULKER_BOX")) {
+                cleanupShulkerBox(cursorItem, cursorSessionId);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        
+        // Check cursor item
+        ItemStack cursorItem = player.getItemOnCursor();
+        if (cursorItem != null) {
+            String cursorSessionId = getEventSessionId(cursorItem);
+            if (cursorSessionId != null && !activeSessions.contains(cursorSessionId)) {
+                player.setItemOnCursor(null);
+            } else if (cursorItem.getType().name().contains("SHULKER_BOX")) {
+                cleanupShulkerBox(cursorItem, cursorSessionId);
+            }
         }
     }
 } 
