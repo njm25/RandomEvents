@@ -7,7 +7,6 @@ import org.bukkit.command.TabCompleter;
 import org.jetbrains.annotations.NotNull;
 
 import nc.randomEvents.RandomEvents;
-import nc.randomEvents.services.EventManager;
 
 import java.util.ArrayList;
 import java.util.Collections;

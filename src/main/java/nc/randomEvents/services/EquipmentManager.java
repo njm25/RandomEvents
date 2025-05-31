@@ -8,7 +8,6 @@ import org.bukkit.entity.*;
 import org.bukkit.entity.minecart.StorageMinecart;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.ItemSpawnEvent;
@@ -27,7 +26,6 @@ public class EquipmentManager implements Listener {
     private static final String EQUIPMENT_KEY = "equipment";
     private static final String EQUIPMENT_ID_KEY = "equipment_id";
     private static final String EQUIPMENT_SESSION_KEY = "equipment_session";
-    private static final int CHUNK_SCAN_RADIUS = 8; // Scan 8 chunks in each direction (16 chunks total)
     private final Set<String> activeSessions;
 
     public EquipmentManager(RandomEvents plugin) {
@@ -197,19 +195,6 @@ public class EquipmentManager implements Listener {
 
         // End the session
         endSession(sessionId);
-    }
-
-    /**
-     * Gets all loaded chunks in a world
-     * @param world The world to get chunks from
-     * @return Set of loaded chunks
-     */
-    private Set<Chunk> getLoadedChunks(World world) {
-        Set<Chunk> chunks = new HashSet<>();
-        for (Chunk chunk : world.getLoadedChunks()) {
-            chunks.add(chunk);
-        }
-        return chunks;
     }
 
     /**
@@ -491,7 +476,6 @@ public class EquipmentManager implements Listener {
     public void onInventoryDrag(InventoryDragEvent event) {
         if (!(event.getWhoClicked() instanceof Player)) return;
         
-        Player player = (Player) event.getWhoClicked();
         ItemStack cursorItem = event.getCursor();
         ItemStack oldCursorItem = event.getOldCursor();
         
