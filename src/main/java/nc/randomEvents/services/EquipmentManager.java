@@ -10,6 +10,7 @@ import org.bukkit.entity.minecart.HopperMinecart;
 import org.bukkit.entity.minecart.StorageMinecart;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.ItemSpawnEvent;
@@ -514,65 +515,27 @@ public class EquipmentManager implements Listener, SessionParticipant {
 
     @EventHandler
     public void onItemSpawn(ItemSpawnEvent event) {
-        if (isEventEquipment(event.getEntity().getItemStack())) {
+        // Only cancel if it's an event item being spawned by something other than a player drop
+        if (isEventEquipment(event.getEntity().getItemStack()) && 
+            event.getEntity().getThrower() == null) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler
-    public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player)) return;
-        
-        Player player = (Player) event.getWhoClicked();
-        ItemStack clickedItem = event.getCurrentItem();
-        ItemStack cursorItem = event.getCursor();
-        ItemStack hotbarItem = event.getHotbarButton() != -1 ? 
-            player.getInventory().getItem(event.getHotbarButton()) : null;
-        
-        // Check clicked item
-        if (clickedItem != null) {
-            UUID clickedSessionId = getEventSessionId(clickedItem);
-            if (clickedSessionId != null && !plugin.getSessionRegistry().isActive(clickedSessionId)) {
-                event.setCancelled(true);
-                event.getInventory().remove(clickedItem);
-            } else if (clickedItem.getType().name().contains("SHULKER_BOX")) {
-                cleanupShulkerBox(clickedItem, clickedSessionId);
-            }
-        }
-
-        // Check cursor item
-        if (cursorItem != null) {
-            UUID cursorSessionId = getEventSessionId(cursorItem);
-            if (cursorSessionId != null && !plugin.getSessionRegistry().isActive(cursorSessionId)) {
-                event.setCancelled(true);
-                event.getInventory().remove(cursorItem);
-                player.setItemOnCursor(null);
-            } else if (cursorItem.getType().name().contains("SHULKER_BOX")) {
-                cleanupShulkerBox(cursorItem, cursorSessionId);
-            }
-        }
-
-        // Check hotbar item
-        if (hotbarItem != null) {
-            UUID hotbarSessionId = getEventSessionId(hotbarItem);
-            if (hotbarSessionId != null && !plugin.getSessionRegistry().isActive(hotbarSessionId)) {
-                event.setCancelled(true);
-                event.getInventory().remove(hotbarItem);
-            } else if (hotbarItem.getType().name().contains("SHULKER_BOX")) {
-                cleanupShulkerBox(hotbarItem, hotbarSessionId);
-            }
-        }
-
-        // Check top inventory (crafting table, anvil, etc.)
-        Inventory topInventory = event.getView().getTopInventory();
-        if (topInventory != null) {
-            for (ItemStack item : topInventory.getContents()) {
-                if (item != null) {
-                    UUID itemSessionId = getEventSessionId(item);
-                    if (itemSessionId != null && !plugin.getSessionRegistry().isActive(itemSessionId)) {
-                        topInventory.remove(item);
-                    } else if (item.getType().name().contains("SHULKER_BOX")) {
-                        cleanupShulkerBox(item, itemSessionId);
+    public void onPlayerInteract(PlayerInteractEvent event) {
+        if (event.getItem() != null && isEventEquipment(event.getItem())) {
+            // Only cancel specific block interactions
+            if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+                Block block = event.getClickedBlock();
+                if (block != null) {
+                    Material type = block.getType();
+                    if (type == Material.COMPOSTER ||
+                        type == Material.CAMPFIRE ||
+                        type == Material.SOUL_CAMPFIRE ||
+                        type == Material.LECTERN ||
+                        type == Material.JUKEBOX) {
+                        event.setCancelled(true);
                     }
                 }
             }
@@ -584,102 +547,18 @@ public class EquipmentManager implements Listener, SessionParticipant {
         if (!(event.getWhoClicked() instanceof Player)) return;
         
         ItemStack cursorItem = event.getCursor();
-        ItemStack oldCursorItem = event.getOldCursor();
-        
-        UUID cursorSessionId = cursorItem != null ? getEventSessionId(cursorItem) : null;
-        UUID oldCursorSessionId = oldCursorItem != null ? getEventSessionId(oldCursorItem) : null;
-        
-        if (cursorSessionId != null && !plugin.getSessionRegistry().isActive(cursorSessionId)) {
-            event.setCancelled(true);
-            if (cursorItem != null) {
-                event.getInventory().remove(cursorItem);
-            }
-        }
-        if (oldCursorSessionId != null && !plugin.getSessionRegistry().isActive(oldCursorSessionId)) {
-            event.setCancelled(true);
-            if (oldCursorItem != null) {
-                event.getInventory().remove(oldCursorItem);
+        if (cursorItem != null && isEventEquipment(cursorItem)) {
+            // Only allow dragging within player's own inventory
+            if (event.getView().getTopInventory() != event.getWhoClicked().getInventory()) {
+                event.setCancelled(true);
             }
         }
     }
 
     @EventHandler
     public void onPlayerDropItem(PlayerDropItemEvent event) {
-        ItemStack item = event.getItemDrop().getItemStack();
-        UUID sessionId = getEventSessionId(item);
-        if (sessionId != null && !plugin.getSessionRegistry().isActive(sessionId)) {
-            event.setCancelled(true);
-            event.getItemDrop().remove();
-        }
-    }
-
-    @EventHandler
-    public void onInventoryMoveItem(InventoryMoveItemEvent event) {
-        ItemStack item = event.getItem();
-        UUID sessionId = getEventSessionId(item);
-        if (sessionId != null && !plugin.getSessionRegistry().isActive(sessionId)) {
-            event.setCancelled(true);
-            event.getSource().remove(item);
-        }
-    }
-
-    @EventHandler
-    public void onHopperPickup(InventoryPickupItemEvent event) {
-        ItemStack item = event.getItem().getItemStack();
-        UUID sessionId = getEventSessionId(item);
-        if (sessionId != null && !plugin.getSessionRegistry().isActive(sessionId)) {
-            event.setCancelled(true);
-            event.getItem().remove();
-        }
-    }
-
-    @EventHandler
-    public void onHopperTransfer(InventoryMoveItemEvent event) {
-        ItemStack item = event.getItem();
-        UUID sessionId = getEventSessionId(item);
-        if (sessionId != null && !plugin.getSessionRegistry().isActive(sessionId)) {
-            event.setCancelled(true);
-            event.getSource().remove(item);
-        }
-    }
-
-    @EventHandler
-    public void onPlayerInteract(PlayerInteractEvent event) {
-        if (event.getItem() != null) {
-            UUID sessionId = getEventSessionId(event.getItem());
-            if (sessionId != null && !plugin.getSessionRegistry().isActive(sessionId)) {
-                event.setCancelled(true);
-                event.getPlayer().getInventory().remove(event.getItem());
-            }
-        }
-    }
-
-    @EventHandler
-    public void onBlockPlace(BlockPlaceEvent event) {
-        ItemStack item = event.getItemInHand();
-        UUID sessionId = getEventSessionId(item);
-        if (sessionId != null && !plugin.getSessionRegistry().isActive(sessionId)) {
-            event.setCancelled(true);
-            event.getPlayer().getInventory().remove(item);
-        }
-    }
-
-    @EventHandler
-    public void onPlayerSwapHandItems(PlayerSwapHandItemsEvent event) {
-        ItemStack mainHand = event.getMainHandItem();
-        ItemStack offHand = event.getOffHandItem();
-        
-        UUID mainHandSessionId = mainHand != null ? getEventSessionId(mainHand) : null;
-        UUID offHandSessionId = offHand != null ? getEventSessionId(offHand) : null;
-        
-        if (mainHandSessionId != null && !plugin.getSessionRegistry().isActive(mainHandSessionId)) {
-            event.setCancelled(true);
-            event.getPlayer().getInventory().setItemInOffHand(null);
-        }
-        if (offHandSessionId != null && !plugin.getSessionRegistry().isActive(offHandSessionId)) {
-            event.setCancelled(true);
-            event.getPlayer().getInventory().setItemInMainHand(null);
-        }
+        // Allow dropping event items
+        // No cancellation needed
     }
 
     @EventHandler
@@ -689,28 +568,13 @@ public class EquipmentManager implements Listener, SessionParticipant {
         Player player = (Player) event.getPlayer();
         Inventory topInventory = event.getView().getTopInventory();
         
-        // Check top inventory (crafting table, anvil, etc.)
+        // Check top inventory for any event items that might have slipped through
         if (topInventory != null) {
             for (ItemStack item : topInventory.getContents()) {
-                if (item != null) {
-                    UUID itemSessionId = getEventSessionId(item);
-                    if (itemSessionId != null && !plugin.getSessionRegistry().isActive(itemSessionId)) {
-                        topInventory.remove(item);
-                    } else if (item.getType().name().contains("SHULKER_BOX")) {
-                        cleanupShulkerBox(item, itemSessionId);
-                    }
+                if (item != null && isEventEquipment(item)) {
+                    topInventory.remove(item);
+                    player.getWorld().dropItemNaturally(player.getLocation(), item);
                 }
-            }
-        }
-
-        // Check cursor item
-        ItemStack cursorItem = player.getItemOnCursor();
-        if (cursorItem != null) {
-            UUID cursorSessionId = getEventSessionId(cursorItem);
-            if (cursorSessionId != null && !plugin.getSessionRegistry().isActive(cursorSessionId)) {
-                player.setItemOnCursor(null);
-            } else if (cursorItem.getType().name().contains("SHULKER_BOX")) {
-                cleanupShulkerBox(cursorItem, cursorSessionId);
             }
         }
     }
@@ -729,5 +593,91 @@ public class EquipmentManager implements Listener, SessionParticipant {
                 cleanupShulkerBox(cursorItem, cursorSessionId);
             }
         }
+    }
+
+    @EventHandler
+    public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
+        if (!(event.getPlayer().getInventory().getItemInMainHand() != null && 
+              isEventEquipment(event.getPlayer().getInventory().getItemInMainHand())) &&
+            !(event.getPlayer().getInventory().getItemInOffHand() != null && 
+              isEventEquipment(event.getPlayer().getInventory().getItemInOffHand()))) {
+            return; // No event items in either hand, allow interaction
+        }
+
+        // Only cancel specific entity interactions
+        if (event.getRightClicked() instanceof ArmorStand ||
+            event.getRightClicked() instanceof ItemFrame) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onHopperPickup(InventoryPickupItemEvent event) {
+        ItemStack item = event.getItem().getItemStack();
+        if (isEventEquipment(item)) {
+            event.setCancelled(true);
+            event.getItem().remove(); // Delete the item instead of just cancelling
+            plugin.getLogger().info("Deleted event item attempted to be picked up by hopper: " + item.getType());
+        }
+    }
+
+    @EventHandler
+    public void onHopperTransfer(InventoryMoveItemEvent event) {
+        ItemStack item = event.getItem();
+        if (isEventEquipment(item)) {
+            event.setCancelled(true);
+            // Find and remove the item from the source inventory
+            Inventory source = event.getSource();
+            source.remove(item);
+            plugin.getLogger().info("Deleted event item attempted to be transferred by hopper: " + item.getType());
+        }
+    }
+
+    @EventHandler
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player)) return;
+        
+        Player player = (Player) event.getWhoClicked();
+        ItemStack clickedItem = event.getCurrentItem();
+        ItemStack cursorItem = event.getCursor();
+        
+        // Handle shift-clicking
+        if (event.isShiftClick()) {
+            if (clickedItem != null && isEventEquipment(clickedItem)) {
+                // Only cancel if trying to shift-click into a top inventory
+                if (event.getView().getTopInventory() != player.getInventory()) {
+                    event.setCancelled(true);
+                    return;
+                }
+                // Allow shift-clicking within own inventory
+                return;
+            }
+        }
+        
+        // If clicking with event item in cursor
+        if (cursorItem != null && isEventEquipment(cursorItem)) {
+            // Only allow dropping back into player's own inventory
+            if (event.getClickedInventory() == player.getInventory()) {
+                return; // Allow the click
+            }
+            event.setCancelled(true);
+            return;
+        }
+        
+        // If clicking on an event item
+        if (clickedItem != null && isEventEquipment(clickedItem)) {
+            // Only allow if it's in player's own inventory
+            if (event.getClickedInventory() == player.getInventory()) {
+                return; // Allow the click
+            }
+            event.setCancelled(true);
+            return;
+        }
+    }
+
+    @EventHandler
+    public void onBlockPlace(BlockPlaceEvent event) {
+        // Allow block placement by default
+        // No cancellation needed
     }
 } 
