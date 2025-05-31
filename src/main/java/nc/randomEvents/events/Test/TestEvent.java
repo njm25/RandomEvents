@@ -3,6 +3,8 @@ package nc.randomEvents.events.Test;
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.core.BaseEvent;
 import nc.randomEvents.services.EquipmentManager;
+import nc.randomEvents.services.SessionRegistry;
+
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -11,9 +13,13 @@ import java.util.*;
 
 public class TestEvent extends BaseEvent {
     private final EquipmentManager equipmentManager;
-    
+    private final RandomEvents plugin;      
+    private final SessionRegistry sessionRegistry;
+
     public TestEvent(RandomEvents plugin) {
         this.equipmentManager = plugin.getEquipmentManager();
+        this.sessionRegistry = plugin.getSessionRegistry();
+        this.plugin = plugin;
         
         // Configure event timing
         setTickInterval(20L); // Tick every second
@@ -28,13 +34,25 @@ public class TestEvent extends BaseEvent {
             // Test different equipment scenarios
             testEquipmentScenarios(player, sessionId);
         });
+
+        // Schedule 10 ticks, each 1 second apart, then end the session
+        for (int i = 0; i < 10; i++) {
+            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                players.forEach(player -> {
+                    player.sendMessage("Custom tick!");
+                });
+            }, i * 20L); // 20L is 1 second in server ticks
+        }
+        
+        // End the session after 10 ticks
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            sessionRegistry.endSession(sessionId);
+        }, 200L); // 200L is 10 seconds in server ticks
     }
     
     @Override
     public void onTick(UUID sessionId, Set<Player> players) {
-        players.forEach(player -> {
-            player.sendMessage("TestEvent tick!");
-        });
+        
     }
     
     @Override
