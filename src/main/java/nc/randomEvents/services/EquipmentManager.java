@@ -298,19 +298,6 @@ public class EquipmentManager implements Listener, SessionParticipant {
             if (hasEventArmor) {
                 stand.getEquipment().setArmorContents(null);
             }
-        } else if (entity instanceof Minecart) {
-            if (entity instanceof StorageMinecart) {
-                StorageMinecart minecart = (StorageMinecart) entity;
-                cleanupInventory(minecart.getInventory(), sessionId);
-            } else if (entity instanceof HopperMinecart) {
-                HopperMinecart hopperMinecart = (HopperMinecart) entity;
-                cleanupInventory(hopperMinecart.getInventory(), sessionId);
-            }
-        } else if (entity instanceof Boat) {
-            if (entity instanceof ChestBoat) {
-                ChestBoat boat = (ChestBoat) entity;
-                cleanupInventory(boat.getInventory(), sessionId);
-            }
         } else if (entity instanceof AbstractHorse) {
             if (entity instanceof ChestedHorse) {
                 ChestedHorse horse = (ChestedHorse) entity;
@@ -546,11 +533,17 @@ public class EquipmentManager implements Listener, SessionParticipant {
     public void onInventoryDrag(InventoryDragEvent event) {
         if (!(event.getWhoClicked() instanceof Player)) return;
         
+        Player player = (Player) event.getWhoClicked();
         ItemStack cursorItem = event.getCursor();
+        
+        // If dragging an event item
         if (cursorItem != null && isEventEquipment(cursorItem)) {
-            // Only allow dragging within player's own inventory
-            if (event.getView().getTopInventory() != event.getWhoClicked().getInventory()) {
-                event.setCancelled(true);
+            // Check if any of the slots being dragged to are in the top inventory
+            for (int slot : event.getRawSlots()) {
+                if (slot < event.getView().getTopInventory().getSize()) {
+                    event.setCancelled(true);
+                    return;
+                }
             }
         }
     }
@@ -644,12 +637,23 @@ public class EquipmentManager implements Listener, SessionParticipant {
         // Handle shift-clicking
         if (event.isShiftClick()) {
             if (clickedItem != null && isEventEquipment(clickedItem)) {
-                // Only cancel if trying to shift-click into a top inventory
+                // Cancel if trying to shift-click into top inventory
                 if (event.getView().getTopInventory() != player.getInventory()) {
                     event.setCancelled(true);
-                    return;
                 }
-                // Allow shift-clicking within own inventory
+                return;
+            }
+        }
+        
+        // Handle number key clicks (1-9) and drag-splitting
+        if (event.getClick() == ClickType.NUMBER_KEY || 
+            event.getClick() == ClickType.DROP || 
+            event.getClick() == ClickType.CONTROL_DROP) {
+            if (clickedItem != null && isEventEquipment(clickedItem)) {
+                // Cancel if trying to move into top inventory
+                if (event.getView().getTopInventory() != player.getInventory()) {
+                    event.setCancelled(true);
+                }
                 return;
             }
         }
@@ -679,5 +683,13 @@ public class EquipmentManager implements Listener, SessionParticipant {
     public void onBlockPlace(BlockPlaceEvent event) {
         // Allow block placement by default
         // No cancellation needed
+    }
+
+    @EventHandler
+    public void onPlayerArmorStandManipulate(PlayerArmorStandManipulateEvent event) {
+        // Block any armor stand manipulation with event items
+        if (isEventEquipment(event.getPlayerItem())) {
+            event.setCancelled(true);
+        }
     }
 } 
