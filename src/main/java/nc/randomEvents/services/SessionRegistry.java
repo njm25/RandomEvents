@@ -28,7 +28,7 @@ public class SessionRegistry {
     public void registerSession(EventSession session) {
         activeSessions.put(session.getSessionId(), session);
         // Notify all participants of session start
-        participants.forEach(p -> p.onSessionStart(session.getSessionId(), session.getPlayers()));
+        participants.forEach(p -> p.onSessionStart(session.getSessionId()));
     }
     
     /**
@@ -38,7 +38,7 @@ public class SessionRegistry {
         EventSession session = activeSessions.remove(sessionId);
         if (session != null) {
             // Notify all participants of session end
-            participants.forEach(p -> p.onSessionEnd(sessionId, session.getPlayers()));
+            participants.forEach(p -> p.onSessionEnd(sessionId));
         }
     }
     
@@ -54,6 +54,15 @@ public class SessionRegistry {
      */
     public Collection<EventSession> getActiveSessions() {
         return Collections.unmodifiableCollection(activeSessions.values());
+    }
+    
+    /**
+     * Get a specific session by ID
+     * @param sessionId The session ID to look up
+     * @return The session, or null if not found
+     */
+    public EventSession getSession(UUID sessionId) {
+        return activeSessions.get(sessionId);
     }
     
     /**

@@ -21,7 +21,7 @@ public class EventManager {
 
     public EventManager(RandomEvents plugin) {
         this.plugin = plugin;
-        this.sessionRegistry = new SessionRegistry(plugin);
+        this.sessionRegistry = plugin.getSessionRegistry();
         registerEvents();
     }
 
@@ -54,7 +54,7 @@ public class EventManager {
 
             // Create and start a new session
             new EventSession(plugin, event, playersInAcceptedWorlds);
-            
+
             plugin.getLogger().info("Started event: " + eventName + " for players in accepted worlds: " + String.join(", ", acceptedWorlds));
             return true;
         } else {
@@ -67,9 +67,6 @@ public class EventManager {
         return new ArrayList<>(events.keySet());
     }
 
-    public SessionRegistry getSessionRegistry() {
-        return sessionRegistry;
-    }
 
     /**
      * Clean up all running sessions when the plugin is disabled

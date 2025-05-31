@@ -35,8 +35,6 @@ public class TestEvent implements Event {
 
     @Override
     public void execute(Set<Player> players) {
-        // Start the session before giving out items
-        equipmentManager.startSession(SESSION_ID);
         
         for (Player player : players) {
             if (!player.isOnline() || player.isDead()) continue;

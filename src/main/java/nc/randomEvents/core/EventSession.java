@@ -38,13 +38,13 @@ public class EventSession {
         
         // Start the event
         plugin.getSessionRegistry().registerSession(this);
-        event.onStart(getPlayers());
+        event.onStart(sessionId, getPlayers());
         
         // Schedule periodic ticks if interval > 0
         if (event.getTickInterval() > 0) {
             tickTask = plugin.getServer().getScheduler().runTaskTimer(
                 plugin,
-                () -> event.onTick(getPlayers()),
+                () -> event.onTick(sessionId, getPlayers()),
                 event.getTickInterval(),
                 event.getTickInterval()
             );
@@ -81,8 +81,8 @@ public class EventSession {
         }
         
         // End the event
+        event.onEnd(sessionId, getPlayers());
         plugin.getSessionRegistry().unregisterSession(sessionId);
-        event.onEnd(getPlayers());
     }
     
     /**

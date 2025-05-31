@@ -2,6 +2,7 @@ package nc.randomEvents.core;
 
 import org.bukkit.entity.Player;
 import java.util.Set;
+import java.util.UUID;
 
 public abstract class BaseEvent {
     private long tickInterval = 20L; // Default 1 second
@@ -11,13 +12,13 @@ public abstract class BaseEvent {
      * Called when the event session starts
      * @param players The set of players participating in this event
      */
-    public abstract void onStart(Set<Player> players);
+    public abstract void onStart(UUID sessionId, Set<Player> players);
     
     /**
      * Called periodically based on tickInterval
      * @param players The current set of players in the event
      */
-    public void onTick(Set<Player> players) {
+    public void onTick(UUID sessionId, Set<Player> players) {
         // Default implementation does nothing
     }
     
@@ -25,7 +26,7 @@ public abstract class BaseEvent {
      * Called when the event session ends
      * @param players The final set of players in the event
      */
-    public abstract void onEnd(Set<Player> players);
+    public abstract void onEnd(UUID sessionId, Set<Player> players);
     
     /**
      * @return The interval in ticks between onTick calls

@@ -303,6 +303,7 @@ public class QuestEvent implements Event, Listener {
 
             // Generate and give rewards
             RewardGenerator rewardGenerator = plugin.getRewardGenerator();
+
             if (rewardGenerator != null) {
                 List<ItemStack> rewards = rewardGenerator.generateRewards(
                     new TierQuantity()
