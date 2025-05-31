@@ -2,6 +2,7 @@ package nc.randomEvents.services;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.utils.PersistentDataHelper;
+import nc.randomEvents.core.SessionParticipant;
 import org.bukkit.*;
 import org.bukkit.block.*;
 import org.bukkit.entity.*;
@@ -22,18 +23,17 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.util.*;
 
-public class EquipmentManager implements Listener {
+public class EquipmentManager implements Listener, SessionParticipant {
     private final RandomEvents plugin;
     private static final String EQUIPMENT_KEY = "equipment";
     private static final String EQUIPMENT_ID_KEY = "equipment_id";
     private static final String EQUIPMENT_SESSION_KEY = "equipment_session";
-    private final Set<String> activeSessions;
 
     public EquipmentManager(RandomEvents plugin) {
         this.plugin = plugin;
-        this.activeSessions = new HashSet<>();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
-        plugin.getLogger().info("EquipmentManager initialized with " + activeSessions.size() + " active sessions");
+        plugin.getSessionRegistry().registerParticipant(this);
+        plugin.getLogger().info("EquipmentManager initialized");
     }
 
     /**
@@ -43,7 +43,7 @@ public class EquipmentManager implements Listener {
      * @param equipmentId Unique identifier for this equipment
      * @param sessionId The event session this equipment belongs to
      */
-    public void giveEquipment(Player player, ItemStack item, String equipmentId, String sessionId) {
+    public void giveEquipment(Player player, ItemStack item, String equipmentId, UUID sessionId) {
         // Add persistent data to the item
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
@@ -52,7 +52,7 @@ public class EquipmentManager implements Listener {
             PersistentDataHelper.set(meta.getPersistentDataContainer(), plugin, EQUIPMENT_ID_KEY, 
                                    PersistentDataType.STRING, equipmentId);
             PersistentDataHelper.set(meta.getPersistentDataContainer(), plugin, EQUIPMENT_SESSION_KEY, 
-                                   PersistentDataType.STRING, sessionId);
+                                   PersistentDataType.STRING, sessionId.toString());
             item.setItemMeta(meta);
         }
 
@@ -71,7 +71,7 @@ public class EquipmentManager implements Listener {
      * @param kitId Unique identifier for this kit
      * @param sessionId The event session this kit belongs to
      */
-    public void giveFullKit(Player player, Map<Integer, ItemStack> kit, String kitId, String sessionId) {
+    public void giveFullKit(Player player, Map<Integer, ItemStack> kit, String kitId, UUID sessionId) {
         for (Map.Entry<Integer, ItemStack> entry : kit.entrySet()) {
             ItemStack item = entry.getValue();
             // Add persistent data to each item
@@ -82,7 +82,7 @@ public class EquipmentManager implements Listener {
                 PersistentDataHelper.set(meta.getPersistentDataContainer(), plugin, EQUIPMENT_ID_KEY, 
                                        PersistentDataType.STRING, kitId);
                 PersistentDataHelper.set(meta.getPersistentDataContainer(), plugin, EQUIPMENT_SESSION_KEY, 
-                                       PersistentDataType.STRING, sessionId);
+                                       PersistentDataType.STRING, sessionId.toString());
                 item.setItemMeta(meta);
             }
 
@@ -94,24 +94,15 @@ public class EquipmentManager implements Listener {
         }
     }
 
-    /**
-     * Starts tracking a session
-     * @param sessionId The session ID to track
-     */
-    public void startSession(String sessionId) {
-        activeSessions.add(sessionId);
-        plugin.getLogger().info("Started tracking session: " + sessionId);
-        plugin.getLogger().info("Active sessions: " + activeSessions);
+    @Override
+    public void onSessionStart(UUID sessionId) {
+        plugin.getLogger().info("EquipmentManager tracking new session: " + sessionId);
     }
 
-    /**
-     * Stops tracking a session
-     * @param sessionId The session ID to stop tracking
-     */
-    public void endSession(String sessionId) {
-        activeSessions.remove(sessionId);
-        plugin.getLogger().info("Stopped tracking session: " + sessionId);
-        plugin.getLogger().info("Remaining active sessions: " + activeSessions);
+    @Override
+    public void onSessionEnd(UUID sessionId) {
+        plugin.getLogger().info("EquipmentManager cleaning up session: " + sessionId);
+        cleanupSession(sessionId);
     }
 
     /**
@@ -133,23 +124,28 @@ public class EquipmentManager implements Listener {
      * @param item The item to check
      * @return The session ID, or null if not an event item
      */
-    private String getEventSessionId(ItemStack item) {
+    private UUID getEventSessionId(ItemStack item) {
         if (item == null || !item.hasItemMeta()) return null;
         
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return null;
 
-        String sessionId = PersistentDataHelper.get(
+        String sessionIdStr = PersistentDataHelper.get(
             meta.getPersistentDataContainer(),
             plugin,
             EQUIPMENT_SESSION_KEY,
             PersistentDataType.STRING
         );
         
-        if (sessionId != null) {
-            plugin.getLogger().info("Found event item with session ID: " + sessionId);
+        if (sessionIdStr != null) {
+            try {
+                return UUID.fromString(sessionIdStr);
+            } catch (IllegalArgumentException e) {
+                plugin.getLogger().warning("Invalid session ID format in item: " + sessionIdStr);
+                return null;
+            }
         }
-        return sessionId;
+        return null;
     }
 
     /**
@@ -158,22 +154,22 @@ public class EquipmentManager implements Listener {
      * @param sessionId The session ID to check against
      * @return true if the item is event equipment for the session
      */
-    private boolean isEventEquipment(ItemStack item, String sessionId) {
+    private boolean isEventEquipment(ItemStack item, UUID sessionId) {
         if (item == null || !item.hasItemMeta()) return false;
         
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return false;
 
         return PersistentDataHelper.has(meta.getPersistentDataContainer(), plugin, EQUIPMENT_KEY, PersistentDataType.BYTE) &&
-               PersistentDataHelper.get(meta.getPersistentDataContainer(), plugin, EQUIPMENT_SESSION_KEY, 
-                                      PersistentDataType.STRING).equals(sessionId);
+               sessionId.toString().equals(PersistentDataHelper.get(meta.getPersistentDataContainer(), plugin, EQUIPMENT_SESSION_KEY, 
+                                      PersistentDataType.STRING));
     }
 
     /**
      * Cleans up all equipment for a specific session
      * @param sessionId The session ID to clean up
      */
-    public void cleanupSession(String sessionId) {
+    private void cleanupSession(UUID sessionId) {
         // Clean up items in player inventories
         for (Player player : plugin.getServer().getOnlinePlayers()) {
             cleanupPlayerInventory(player, sessionId);
@@ -181,8 +177,8 @@ public class EquipmentManager implements Listener {
             // Check player's cursor
             ItemStack cursorItem = player.getItemOnCursor();
             if (cursorItem != null) {
-                String cursorSessionId = getEventSessionId(cursorItem);
-                if (cursorSessionId != null && !activeSessions.contains(cursorSessionId)) {
+                UUID cursorSessionId = getEventSessionId(cursorItem);
+                if (cursorSessionId != null && cursorSessionId.equals(sessionId)) {
                     player.setItemOnCursor(null);
                 } else if (cursorItem.getType().name().contains("SHULKER_BOX")) {
                     cleanupShulkerBox(cursorItem, cursorSessionId);
@@ -195,8 +191,8 @@ public class EquipmentManager implements Listener {
                 if (topInventory != null) {
                     for (ItemStack item : topInventory.getContents()) {
                         if (item != null) {
-                            String itemSessionId = getEventSessionId(item);
-                            if (itemSessionId != null && !activeSessions.contains(itemSessionId)) {
+                            UUID itemSessionId = getEventSessionId(item);
+                            if (itemSessionId != null && itemSessionId.equals(sessionId)) {
                                 topInventory.remove(item);
                             } else if (item.getType().name().contains("SHULKER_BOX")) {
                                 cleanupShulkerBox(item, itemSessionId);
@@ -221,9 +217,6 @@ public class EquipmentManager implements Listener {
                 }
             }
         }
-
-        // End the session
-        endSession(sessionId);
     }
 
     /**
@@ -231,7 +224,7 @@ public class EquipmentManager implements Listener {
      * @param entity The entity to clean up
      * @param sessionId The session ID to clean up
      */
-    private void cleanupEntity(Entity entity, String sessionId) {
+    private void cleanupEntity(Entity entity, UUID sessionId) {
         if (entity instanceof Item) {
             Item item = (Item) entity;
             if (isEventEquipment(item.getItemStack(), sessionId)) {
@@ -340,7 +333,7 @@ public class EquipmentManager implements Listener {
      * @param blockState The block state to clean up
      * @param sessionId The session ID to clean up
      */
-    private void cleanupBlockInventory(BlockState blockState, String sessionId) {
+    private void cleanupBlockInventory(BlockState blockState, UUID sessionId) {
         if (blockState instanceof Container) {
             Container container = (Container) blockState;
             cleanupInventory(container.getInventory(), sessionId);
@@ -395,7 +388,7 @@ public class EquipmentManager implements Listener {
      * @param inventory The inventory to clean up
      * @param sessionId The session ID to clean up
      */
-    private void cleanupInventory(Inventory inventory, String sessionId) {
+    private void cleanupInventory(Inventory inventory, UUID sessionId) {
         for (ItemStack item : inventory.getContents()) {
             if (item != null) {
                 if (isEventEquipment(item, sessionId)) {
@@ -407,7 +400,7 @@ public class EquipmentManager implements Listener {
         }
     }
 
-    private void cleanupShulkerBox(ItemStack shulkerBox, String sessionId) {
+    private void cleanupShulkerBox(ItemStack shulkerBox, UUID sessionId) {
         if (shulkerBox.getItemMeta() instanceof BlockStateMeta) {
             BlockStateMeta meta = (BlockStateMeta) shulkerBox.getItemMeta();
             if (meta.getBlockState() instanceof ShulkerBox) {
@@ -429,7 +422,7 @@ public class EquipmentManager implements Listener {
      * @param player The player to clean up
      * @param sessionId The session ID to clean up
      */
-    private void cleanupPlayerInventory(Player player, String sessionId) {
+    private void cleanupPlayerInventory(Player player, UUID sessionId) {
         // Clean main inventory
         for (ItemStack item : player.getInventory().getContents()) {
             if (item != null) {
@@ -511,9 +504,9 @@ public class EquipmentManager implements Listener {
         if (!(event.getEntity() instanceof Player)) return;
         
         ItemStack item = event.getItem().getItemStack();
-        String sessionId = getEventSessionId(item);
+        UUID sessionId = getEventSessionId(item);
         
-        if (sessionId != null && !activeSessions.contains(sessionId)) {
+        if (sessionId != null && !plugin.getSessionRegistry().isActive(sessionId)) {
             event.setCancelled(true);
             event.getItem().remove();
         }
@@ -538,8 +531,8 @@ public class EquipmentManager implements Listener {
         
         // Check clicked item
         if (clickedItem != null) {
-            String clickedSessionId = getEventSessionId(clickedItem);
-            if (clickedSessionId != null && !activeSessions.contains(clickedSessionId)) {
+            UUID clickedSessionId = getEventSessionId(clickedItem);
+            if (clickedSessionId != null && !plugin.getSessionRegistry().isActive(clickedSessionId)) {
                 event.setCancelled(true);
                 event.getInventory().remove(clickedItem);
             } else if (clickedItem.getType().name().contains("SHULKER_BOX")) {
@@ -549,8 +542,8 @@ public class EquipmentManager implements Listener {
 
         // Check cursor item
         if (cursorItem != null) {
-            String cursorSessionId = getEventSessionId(cursorItem);
-            if (cursorSessionId != null && !activeSessions.contains(cursorSessionId)) {
+            UUID cursorSessionId = getEventSessionId(cursorItem);
+            if (cursorSessionId != null && !plugin.getSessionRegistry().isActive(cursorSessionId)) {
                 event.setCancelled(true);
                 event.getInventory().remove(cursorItem);
                 player.setItemOnCursor(null);
@@ -561,8 +554,8 @@ public class EquipmentManager implements Listener {
 
         // Check hotbar item
         if (hotbarItem != null) {
-            String hotbarSessionId = getEventSessionId(hotbarItem);
-            if (hotbarSessionId != null && !activeSessions.contains(hotbarSessionId)) {
+            UUID hotbarSessionId = getEventSessionId(hotbarItem);
+            if (hotbarSessionId != null && !plugin.getSessionRegistry().isActive(hotbarSessionId)) {
                 event.setCancelled(true);
                 event.getInventory().remove(hotbarItem);
             } else if (hotbarItem.getType().name().contains("SHULKER_BOX")) {
@@ -575,8 +568,8 @@ public class EquipmentManager implements Listener {
         if (topInventory != null) {
             for (ItemStack item : topInventory.getContents()) {
                 if (item != null) {
-                    String itemSessionId = getEventSessionId(item);
-                    if (itemSessionId != null && !activeSessions.contains(itemSessionId)) {
+                    UUID itemSessionId = getEventSessionId(item);
+                    if (itemSessionId != null && !plugin.getSessionRegistry().isActive(itemSessionId)) {
                         topInventory.remove(item);
                     } else if (item.getType().name().contains("SHULKER_BOX")) {
                         cleanupShulkerBox(item, itemSessionId);
@@ -593,16 +586,16 @@ public class EquipmentManager implements Listener {
         ItemStack cursorItem = event.getCursor();
         ItemStack oldCursorItem = event.getOldCursor();
         
-        String cursorSessionId = cursorItem != null ? getEventSessionId(cursorItem) : null;
-        String oldCursorSessionId = oldCursorItem != null ? getEventSessionId(oldCursorItem) : null;
+        UUID cursorSessionId = cursorItem != null ? getEventSessionId(cursorItem) : null;
+        UUID oldCursorSessionId = oldCursorItem != null ? getEventSessionId(oldCursorItem) : null;
         
-        if (cursorSessionId != null && !activeSessions.contains(cursorSessionId)) {
+        if (cursorSessionId != null && !plugin.getSessionRegistry().isActive(cursorSessionId)) {
             event.setCancelled(true);
             if (cursorItem != null) {
                 event.getInventory().remove(cursorItem);
             }
         }
-        if (oldCursorSessionId != null && !activeSessions.contains(oldCursorSessionId)) {
+        if (oldCursorSessionId != null && !plugin.getSessionRegistry().isActive(oldCursorSessionId)) {
             event.setCancelled(true);
             if (oldCursorItem != null) {
                 event.getInventory().remove(oldCursorItem);
@@ -613,8 +606,8 @@ public class EquipmentManager implements Listener {
     @EventHandler
     public void onPlayerDropItem(PlayerDropItemEvent event) {
         ItemStack item = event.getItemDrop().getItemStack();
-        String sessionId = getEventSessionId(item);
-        if (sessionId != null && !activeSessions.contains(sessionId)) {
+        UUID sessionId = getEventSessionId(item);
+        if (sessionId != null && !plugin.getSessionRegistry().isActive(sessionId)) {
             event.setCancelled(true);
             event.getItemDrop().remove();
         }
@@ -623,8 +616,8 @@ public class EquipmentManager implements Listener {
     @EventHandler
     public void onInventoryMoveItem(InventoryMoveItemEvent event) {
         ItemStack item = event.getItem();
-        String sessionId = getEventSessionId(item);
-        if (sessionId != null && !activeSessions.contains(sessionId)) {
+        UUID sessionId = getEventSessionId(item);
+        if (sessionId != null && !plugin.getSessionRegistry().isActive(sessionId)) {
             event.setCancelled(true);
             event.getSource().remove(item);
         }
@@ -633,8 +626,8 @@ public class EquipmentManager implements Listener {
     @EventHandler
     public void onHopperPickup(InventoryPickupItemEvent event) {
         ItemStack item = event.getItem().getItemStack();
-        String sessionId = getEventSessionId(item);
-        if (sessionId != null && !activeSessions.contains(sessionId)) {
+        UUID sessionId = getEventSessionId(item);
+        if (sessionId != null && !plugin.getSessionRegistry().isActive(sessionId)) {
             event.setCancelled(true);
             event.getItem().remove();
         }
@@ -643,8 +636,8 @@ public class EquipmentManager implements Listener {
     @EventHandler
     public void onHopperTransfer(InventoryMoveItemEvent event) {
         ItemStack item = event.getItem();
-        String sessionId = getEventSessionId(item);
-        if (sessionId != null && !activeSessions.contains(sessionId)) {
+        UUID sessionId = getEventSessionId(item);
+        if (sessionId != null && !plugin.getSessionRegistry().isActive(sessionId)) {
             event.setCancelled(true);
             event.getSource().remove(item);
         }
@@ -653,8 +646,8 @@ public class EquipmentManager implements Listener {
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
         if (event.getItem() != null) {
-            String sessionId = getEventSessionId(event.getItem());
-            if (sessionId != null && !activeSessions.contains(sessionId)) {
+            UUID sessionId = getEventSessionId(event.getItem());
+            if (sessionId != null && !plugin.getSessionRegistry().isActive(sessionId)) {
                 event.setCancelled(true);
                 event.getPlayer().getInventory().remove(event.getItem());
             }
@@ -664,8 +657,8 @@ public class EquipmentManager implements Listener {
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
         ItemStack item = event.getItemInHand();
-        String sessionId = getEventSessionId(item);
-        if (sessionId != null && !activeSessions.contains(sessionId)) {
+        UUID sessionId = getEventSessionId(item);
+        if (sessionId != null && !plugin.getSessionRegistry().isActive(sessionId)) {
             event.setCancelled(true);
             event.getPlayer().getInventory().remove(item);
         }
@@ -676,14 +669,14 @@ public class EquipmentManager implements Listener {
         ItemStack mainHand = event.getMainHandItem();
         ItemStack offHand = event.getOffHandItem();
         
-        String mainHandSessionId = mainHand != null ? getEventSessionId(mainHand) : null;
-        String offHandSessionId = offHand != null ? getEventSessionId(offHand) : null;
+        UUID mainHandSessionId = mainHand != null ? getEventSessionId(mainHand) : null;
+        UUID offHandSessionId = offHand != null ? getEventSessionId(offHand) : null;
         
-        if (mainHandSessionId != null && !activeSessions.contains(mainHandSessionId)) {
+        if (mainHandSessionId != null && !plugin.getSessionRegistry().isActive(mainHandSessionId)) {
             event.setCancelled(true);
             event.getPlayer().getInventory().setItemInOffHand(null);
         }
-        if (offHandSessionId != null && !activeSessions.contains(offHandSessionId)) {
+        if (offHandSessionId != null && !plugin.getSessionRegistry().isActive(offHandSessionId)) {
             event.setCancelled(true);
             event.getPlayer().getInventory().setItemInMainHand(null);
         }
@@ -700,8 +693,8 @@ public class EquipmentManager implements Listener {
         if (topInventory != null) {
             for (ItemStack item : topInventory.getContents()) {
                 if (item != null) {
-                    String itemSessionId = getEventSessionId(item);
-                    if (itemSessionId != null && !activeSessions.contains(itemSessionId)) {
+                    UUID itemSessionId = getEventSessionId(item);
+                    if (itemSessionId != null && !plugin.getSessionRegistry().isActive(itemSessionId)) {
                         topInventory.remove(item);
                     } else if (item.getType().name().contains("SHULKER_BOX")) {
                         cleanupShulkerBox(item, itemSessionId);
@@ -713,8 +706,8 @@ public class EquipmentManager implements Listener {
         // Check cursor item
         ItemStack cursorItem = player.getItemOnCursor();
         if (cursorItem != null) {
-            String cursorSessionId = getEventSessionId(cursorItem);
-            if (cursorSessionId != null && !activeSessions.contains(cursorSessionId)) {
+            UUID cursorSessionId = getEventSessionId(cursorItem);
+            if (cursorSessionId != null && !plugin.getSessionRegistry().isActive(cursorSessionId)) {
                 player.setItemOnCursor(null);
             } else if (cursorItem.getType().name().contains("SHULKER_BOX")) {
                 cleanupShulkerBox(cursorItem, cursorSessionId);
@@ -729,8 +722,8 @@ public class EquipmentManager implements Listener {
         // Check cursor item
         ItemStack cursorItem = player.getItemOnCursor();
         if (cursorItem != null) {
-            String cursorSessionId = getEventSessionId(cursorItem);
-            if (cursorSessionId != null && !activeSessions.contains(cursorSessionId)) {
+            UUID cursorSessionId = getEventSessionId(cursorItem);
+            if (cursorSessionId != null && !plugin.getSessionRegistry().isActive(cursorSessionId)) {
                 player.setItemOnCursor(null);
             } else if (cursorItem.getType().name().contains("SHULKER_BOX")) {
                 cleanupShulkerBox(cursorItem, cursorSessionId);
