@@ -1,7 +1,6 @@
 package nc.randomEvents.commands;
 
 import nc.randomEvents.RandomEvents;
-import nc.randomEvents.services.EventManager;
 import org.bukkit.command.CommandSender;
 
 import java.util.Collections;
@@ -9,10 +8,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class StartEventCommand implements SubCommand {
-    private final EventManager eventManager;
+    private final RandomEvents plugin;
 
-    public StartEventCommand(RandomEvents plugin, EventManager eventManager) {
-        this.eventManager = eventManager;
+    public StartEventCommand(RandomEvents plugin) {
+        this.plugin = plugin;
     }
 
     @Override
@@ -28,7 +27,7 @@ public class StartEventCommand implements SubCommand {
         }
 
         String eventName = args[1];
-        if (eventManager.startEvent(eventName)) {
+        if (plugin.getEventManager().startEvent(eventName)) {
             sender.sendMessage("Event '" + eventName + "' started successfully.");
         } else {
             sender.sendMessage("Failed to start event '" + eventName + "'. Check console for details.");
@@ -44,7 +43,7 @@ public class StartEventCommand implements SubCommand {
     // Basic tab completion for event names
     public List<String> onTabComplete(CommandSender sender, String[] args) {
         if (args.length == 2) {
-            return eventManager.getEventNames().stream()
+            return plugin.getEventManager().getEventNames().stream()
                     .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
                     .sorted()
                     .collect(Collectors.toList());

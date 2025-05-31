@@ -1,10 +1,10 @@
-package nc.randomEvents.services.events.Quest;
+package nc.randomEvents.events.Quest;
 
 import nc.randomEvents.RandomEvents;
+import nc.randomEvents.events.Event;
 import nc.randomEvents.services.RewardGenerator;
 import nc.randomEvents.services.RewardGenerator.Tier;
 import nc.randomEvents.services.RewardGenerator.TierQuantity;
-import nc.randomEvents.services.events.Event;
 import nc.randomEvents.utils.LocationHelper;
 import nc.randomEvents.utils.SoundHelper;
 import net.kyori.adventure.text.Component;
@@ -303,6 +303,7 @@ public class QuestEvent implements Event, Listener {
 
             // Generate and give rewards
             RewardGenerator rewardGenerator = plugin.getRewardGenerator();
+
             if (rewardGenerator != null) {
                 List<ItemStack> rewards = rewardGenerator.generateRewards(
                     new TierQuantity()

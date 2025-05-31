@@ -1,10 +1,10 @@
-package nc.randomEvents.services.events.Meteor;
+package nc.randomEvents.events.Meteor;
 
 import nc.randomEvents.RandomEvents;
+import nc.randomEvents.events.Event;
 import nc.randomEvents.services.RewardGenerator;
 import nc.randomEvents.services.RewardGenerator.Tier;
 import nc.randomEvents.services.RewardGenerator.TierQuantity;
-import nc.randomEvents.services.events.Event;
 import nc.randomEvents.utils.LocationHelper;
 import nc.randomEvents.utils.MetadataHelper;
 import nc.randomEvents.utils.SoundHelper;
@@ -19,7 +19,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 import net.kyori.adventure.text.Component;

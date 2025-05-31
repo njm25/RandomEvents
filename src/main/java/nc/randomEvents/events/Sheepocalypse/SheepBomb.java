@@ -1,4 +1,4 @@
-package nc.randomEvents.services.events.Sheepocalypse;
+package nc.randomEvents.events.Sheepocalypse;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.utils.SoundHelper;

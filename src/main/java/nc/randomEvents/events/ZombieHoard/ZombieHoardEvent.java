@@ -1,8 +1,8 @@
-package nc.randomEvents.services.events.ZombieHoard;
+package nc.randomEvents.events.ZombieHoard;
 
 import nc.randomEvents.RandomEvents;
+import nc.randomEvents.events.Event;
 import nc.randomEvents.services.RewardGenerator;
-import nc.randomEvents.services.events.Event;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
