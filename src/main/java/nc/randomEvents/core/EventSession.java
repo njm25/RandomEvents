@@ -25,7 +25,6 @@ public class EventSession {
         this.event = event;
         this.players = new HashSet<>(players);
 
-        plugin.getSessionRegistry().registerSession(this);
         start();
     }
     
@@ -38,6 +37,7 @@ public class EventSession {
         }
         
         // Start the event
+        plugin.getSessionRegistry().registerSession(this);
         event.onStart(getPlayers());
         
         // Schedule periodic ticks if interval > 0
@@ -81,6 +81,7 @@ public class EventSession {
         }
         
         // End the event
+        plugin.getSessionRegistry().unregisterSession(sessionId);
         event.onEnd(getPlayers());
     }
     
