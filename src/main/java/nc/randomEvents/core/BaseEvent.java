@@ -7,6 +7,7 @@ import java.util.UUID;
 public abstract class BaseEvent {
     private long tickInterval = 20L; // Default 1 second
     private long duration = 0; // Default no duration
+    private boolean stripsInventory = false; // Default no inventory stripping
     
     /**
      * Called when the event session starts
@@ -34,6 +35,13 @@ public abstract class BaseEvent {
     public long getTickInterval() {
         return tickInterval;
     }
+
+    /**
+     * @return Whether the event strips player inventories
+     */
+    public boolean stripsInventory() {
+        return stripsInventory;
+    }
     
     /**
      * @param tickInterval The interval in ticks between onTick calls
@@ -54,6 +62,13 @@ public abstract class BaseEvent {
      */
     protected void setDuration(long duration) {
         this.duration = duration;
+    }
+
+    /**
+     * @return Whether the event strips player inventories
+     */
+    protected void setStripsInventory(boolean stripsInventory) {
+        this.stripsInventory = stripsInventory;
     }
     
     /**
