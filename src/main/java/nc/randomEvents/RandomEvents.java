@@ -8,6 +8,7 @@ import nc.randomEvents.utils.Metrics;
 
 public final class RandomEvents extends JavaPlugin {
 
+    private Metrics metrics;
     private EventManager eventManager;
     private DataManager dataManager;
     private ConfigManager configManager;
@@ -15,35 +16,81 @@ public final class RandomEvents extends JavaPlugin {
     private RewardGenerator rewardGenerator;
     private EquipmentManager equipmentManager;
     private TestManager testManager;
+    private DisableManager disableManager;
+    private CommandManager commandManager;
+    private StartManager startManager;
+
     @Override
     public void onEnable() {
-        // Initialize metrics
-        new Metrics(this, 26005);
-        
-        // First layer: Independent services
-        configManager = new ConfigManager(this);
-        dataManager = new DataManager(this);
-        sessionRegistry = new SessionRegistry(this);
-        rewardGenerator = new RewardGenerator(this);
-        
-        // Second layer: Services that depend on the registry
-        equipmentManager = new EquipmentManager(this);
-        testManager = new TestManager(this);
-        
-        // Third layer: Event system that coordinates everything
-        eventManager = new EventManager(this);
-        
-        // Finally: Command system that needs access to everything
-        new CommandManager(this);
-        
+        try {
+            startManager = new StartManager(this);
+            startManager.start();
+        } catch (Exception ex) {
+            getLogger().severe("Plugin failed to start correctly. Disabling...");
+            ex.printStackTrace();
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+            
         getLogger().info("RandomEvents has been enabled!");
     }
 
     @Override
     public void onDisable() {
-        if (eventManager != null) {
-            eventManager.shutdown();
+        if (disableManager != null) {
+            disableManager.disablePlugin();
         }
+        getLogger().info("RandomEvents has been disabled!");
+    }
+    
+    // #region Setters
+
+    public void setCommandManager(CommandManager commandManager) {
+        this.commandManager = commandManager;
+    }
+
+    public void setMetrics(Metrics metrics) {
+        this.metrics = metrics;
+    }
+
+    public void setEventManager(EventManager eventManager) {
+        this.eventManager = eventManager;
+    }
+
+    public void setDataManager(DataManager dataManager) {
+        this.dataManager = dataManager;
+    }
+    
+    public void setConfigManager(ConfigManager configManager) {
+        this.configManager = configManager;
+    }
+
+    public void setSessionRegistry(SessionRegistry sessionRegistry) {
+        this.sessionRegistry = sessionRegistry;
+    }
+
+    public void setRewardGenerator(RewardGenerator rewardGenerator) {    
+        this.rewardGenerator = rewardGenerator;
+    }
+
+    public void setEquipmentManager(EquipmentManager equipmentManager) {
+        this.equipmentManager = equipmentManager;
+    }
+
+    public void setTestManager(TestManager testManager) {
+        this.testManager = testManager;
+    }
+
+    public void setDisableManager(DisableManager disableManager) {
+        this.disableManager = disableManager;
+    }
+
+    // #endregion Setters
+
+    // #region Getters
+
+    public Metrics getMetrics() {
+        return metrics;
     }
 
     public EventManager getEventManager() {
@@ -73,4 +120,14 @@ public final class RandomEvents extends JavaPlugin {
     public TestManager getTestManager() {
         return testManager;
     }
+
+    public DisableManager getDisableManager() {
+        return disableManager;
+    }
+
+    public CommandManager getCommandManager() {
+        return commandManager;
+    }
+
+    // #endregion Getters
 }
