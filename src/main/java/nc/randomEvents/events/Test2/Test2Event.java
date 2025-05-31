@@ -4,7 +4,6 @@ import nc.randomEvents.RandomEvents;
 import nc.randomEvents.core.BaseEvent;
 import nc.randomEvents.services.EquipmentManager;
 import nc.randomEvents.services.RewardGenerator;
-import nc.randomEvents.services.SessionRegistry;
 import nc.randomEvents.services.RewardGenerator.Tier;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -15,11 +14,9 @@ import java.util.*;
 
 public class Test2Event extends BaseEvent {
     private final RewardGenerator rewardGenerator;
-    private final SessionRegistry sessionRegistry;
     private final EquipmentManager equipmentManager;
     public Test2Event(RandomEvents plugin) {
         this.rewardGenerator = plugin.getRewardGenerator();
-        this.sessionRegistry = plugin.getSessionRegistry();
         this.equipmentManager = plugin.getEquipmentManager();
         
         // Configure event timing
