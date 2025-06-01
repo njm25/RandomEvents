@@ -4,6 +4,8 @@ import nc.randomEvents.RandomEvents;
 import nc.randomEvents.utils.GiveItemHelper;
 import nc.randomEvents.utils.PersistentDataHelper;
 import nc.randomEvents.core.SessionParticipant;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.block.*;
 import org.bukkit.entity.*;
@@ -183,7 +185,7 @@ public class EquipmentManager implements Listener, SessionParticipant {
                 player.getInventory().setItemInOffHand(null);
                 
                 // Inform the player
-                player.sendMessage(ChatColor.GOLD + "[Event] Your inventory has been temporarily stored for this event.");
+                player.sendMessage(Component.text("[Event] Your inventory has been temporarily stored for this event.").color(NamedTextColor.GOLD));
             }
         }
     }
@@ -206,7 +208,7 @@ public class EquipmentManager implements Listener, SessionParticipant {
                         
                         // Restore the original inventory
                         entry.getValue().restore(player);
-                        player.sendMessage(ChatColor.GOLD + "[Event] Your inventory has been restored.");
+                        player.sendMessage(Component.text("[Event] Your inventory has been restored.").color(NamedTextColor.GOLD));
                     }
                 }
                 
@@ -817,6 +819,6 @@ public class EquipmentManager implements Listener, SessionParticipant {
         player.getInventory().setArmorContents(null);
         player.getInventory().setItemInOffHand(null);
         
-        player.sendMessage(ChatColor.GOLD + "[Event] Your inventory has been temporarily stored for this event.");
+        player.sendMessage(Component.text("[Event] Your inventory has been temporarily stored for this event.").color(NamedTextColor.GOLD));
     }
 } 
