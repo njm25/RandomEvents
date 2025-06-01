@@ -144,38 +144,7 @@ public class ItemHelper {
         return createFullItem(material, count, name, NamedTextColor.YELLOW, NamedTextColor.GRAY, enchantments, lore);
     }
 
-    /**
-     * Creates an item with name, colors, lore, and enchantments
-     * @param material The material of the item
-     * @param count The amount of the item
-     * @param name The name of the item
-     * @param titleColor The color of the name
-     * @param loreColor The color of the lore
-     * @param enchantments Map of enchantments and their levels
-     * @param lore The lore lines
-     * @return The created ItemStack
-     */
-private static ItemStack convertToEnchantedBook(ItemStack item, Map<Enchantment, Integer> enchantments) {
-    ItemMeta originalMeta = item.getItemMeta();
-    ItemStack enchantedBook = new ItemStack(Material.ENCHANTED_BOOK, item.getAmount());
-    EnchantmentStorageMeta meta = (EnchantmentStorageMeta) enchantedBook.getItemMeta();
-    if (meta != null) {
-        // Preserve original metadata
-        if (originalMeta != null) {
-            if (originalMeta.hasDisplayName()) {
-                meta.displayName(originalMeta.displayName());
-            }
-            if (originalMeta.hasLore()) {
-                meta.lore(originalMeta.lore());
-            }
-        }
-        for (Map.Entry<Enchantment, Integer> entry : enchantments.entrySet()) {
-            meta.addStoredEnchant(entry.getKey(), entry.getValue(), true);
-        }
-        enchantedBook.setItemMeta(meta);
-    }
-    return enchantedBook;
-}
+
 
  public static ItemStack createFullItem(Material material, int count, String name, TextColor titleColor, TextColor loreColor, Map<Enchantment, Integer> enchantments, String... lore) {
      ItemStack item = createItemWithLore(material, count, name, titleColor, loreColor, lore);
@@ -219,5 +188,38 @@ private static ItemStack convertToEnchantedBook(ItemStack item, Map<Enchantment,
     public static Enchantment getEnchantment(String name) {
         NamespacedKey key = NamespacedKey.minecraft(name.toLowerCase());
         return RegistryAccess.registryAccess().getRegistry(RegistryKey.ENCHANTMENT).get(key);
+    }
+
+        /**
+     * Creates an item with name, colors, lore, and enchantments
+     * @param material The material of the item
+     * @param count The amount of the item
+     * @param name The name of the item
+     * @param titleColor The color of the name
+     * @param loreColor The color of the lore
+     * @param enchantments Map of enchantments and their levels
+     * @param lore The lore lines
+     * @return The created ItemStack
+     */
+    private static ItemStack convertToEnchantedBook(ItemStack item, Map<Enchantment, Integer> enchantments) {
+    ItemMeta originalMeta = item.getItemMeta();
+    ItemStack enchantedBook = new ItemStack(Material.ENCHANTED_BOOK, item.getAmount());
+    EnchantmentStorageMeta meta = (EnchantmentStorageMeta) enchantedBook.getItemMeta();
+    if (meta != null) {
+        // Preserve original metadata
+        if (originalMeta != null) {
+            if (originalMeta.hasDisplayName()) {
+                meta.displayName(originalMeta.displayName());
+            }
+            if (originalMeta.hasLore()) {
+                meta.lore(originalMeta.lore());
+            }
+        }
+        for (Map.Entry<Enchantment, Integer> entry : enchantments.entrySet()) {
+            meta.addStoredEnchant(entry.getKey(), entry.getValue(), true);
+        }
+        enchantedBook.setItemMeta(meta);
+    }
+    return enchantedBook;
     }
 } 
