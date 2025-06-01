@@ -4,6 +4,7 @@ import nc.randomEvents.RandomEvents;
 import nc.randomEvents.core.BaseEvent;
 import nc.randomEvents.services.EquipmentManager;
 import nc.randomEvents.services.RewardGenerator;
+import nc.randomEvents.utils.GiveItemHelper;
 import nc.randomEvents.services.RewardGenerator.Tier;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -56,11 +57,7 @@ public class Test2Event extends BaseEvent {
             
             // Give rewards to players
             for (ItemStack reward : rewards) {
-                if (!player.getInventory().addItem(reward).isEmpty()) {
-                    // Drop at player's feet if inventory is full
-                    player.getWorld().dropItemNaturally(player.getLocation(), reward);
-                    player.sendMessage(ChatColor.YELLOW + "Your inventory was full, reward dropped at your feet!");
-                }
+                GiveItemHelper.giveItemToPlayer(player, reward);
             }
         });
     }

@@ -1,6 +1,7 @@
 package nc.randomEvents.services;
 
 import nc.randomEvents.RandomEvents;
+import nc.randomEvents.utils.GiveItemHelper;
 import nc.randomEvents.utils.PersistentDataHelper;
 import nc.randomEvents.core.SessionParticipant;
 import org.bukkit.*;
@@ -58,11 +59,7 @@ public class EquipmentManager implements Listener, SessionParticipant {
         }
 
         // Try to give the item to the player
-        if (!giveItemToPlayer(player, item)) {
-            // If inventory is full, drop the item at player's feet
-            player.getWorld().dropItemNaturally(player.getLocation(), item);
-            player.sendMessage("Your inventory was full, so the item was dropped at your feet.");
-        }
+        GiveItemHelper.giveItemToPlayer(player, item);
     }
 
     /**
@@ -87,11 +84,7 @@ public class EquipmentManager implements Listener, SessionParticipant {
                 item.setItemMeta(meta);
             }
 
-            if (!giveItemToPlayer(player, item, entry.getKey())) {
-                // If slot is occupied, drop the item
-                player.getWorld().dropItemNaturally(player.getLocation(), item);
-                player.sendMessage("Slot " + entry.getKey() + " was occupied, so the item was dropped at your feet.");
-            }
+            GiveItemHelper.giveItemToPlayer(player, item);
         }
     }
 
@@ -455,36 +448,6 @@ public class EquipmentManager implements Listener, SessionParticipant {
             }
         }
     }
-
-    /**
-     * Gives an item to a player in a specific slot
-     * @param player The player to give the item to
-     * @param item The item to give
-     * @param slot The slot to put the item in
-     * @return true if successful, false if slot is occupied
-     */
-    private boolean giveItemToPlayer(Player player, ItemStack item, int slot) {
-        if (player.getInventory().getItem(slot) == null) {
-            player.getInventory().setItem(slot, item);
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Gives an item to a player in the first available slot
-     * @param player The player to give the item to
-     * @param item The item to give
-     * @return true if successful, false if inventory is full
-     */
-    private boolean giveItemToPlayer(Player player, ItemStack item) {
-        if (player.getInventory().firstEmpty() != -1) {
-            player.getInventory().addItem(item);
-            return true;
-        }
-        return false;
-    }
-
     // Event Listeners for Item Interactions
 
     @EventHandler
