@@ -23,7 +23,7 @@ public class TestEvent extends BaseEvent {
         
         // Configure event timing
         setTickInterval(20L); // Tick every second
-        setDuration(400L); // Run for 20 seconds
+        setDuration(800L); // Run for 20 seconds
     }
     
     @Override
@@ -47,7 +47,7 @@ public class TestEvent extends BaseEvent {
         // End the session after 10 ticks
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             sessionRegistry.endSession(sessionId);
-        }, 200L); // 200L is 10 seconds in server ticks
+        }, 1000L); // 200L is 10 seconds in server ticks
     }
     
     @Override

@@ -2,11 +2,12 @@ package nc.randomEvents.events.Test2;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.core.BaseEvent;
+import nc.randomEvents.services.EquipmentManager;
 import nc.randomEvents.services.RewardGenerator;
-import nc.randomEvents.services.SessionRegistry;
 import nc.randomEvents.utils.GiveItemHelper;
 import nc.randomEvents.services.RewardGenerator.Tier;
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -14,24 +15,26 @@ import java.util.*;
 
 public class Test2Event extends BaseEvent {
     private final RewardGenerator rewardGenerator;
-    private final SessionRegistry sessionRegistry;
+    private final EquipmentManager equipmentManager;
     public Test2Event(RandomEvents plugin) {
         this.rewardGenerator = plugin.getRewardGenerator();
-        this.sessionRegistry = plugin.getSessionRegistry();
+        this.equipmentManager = plugin.getEquipmentManager();
         
         // Configure event timing
         setTickInterval(20L); // Tick every second
         setDuration(200L); // Run for 10 seconds
+        setStripsInventory(false);
+        setCanBreakBlocks(false);
+        setCanPlaceBlocks(false);
     }
     
     @Override
     public void onStart(UUID sessionId, Set<Player> players) {
         players.forEach(player -> {
             player.sendMessage(ChatColor.GREEN + "Test2Event has started! Will tick for 10 seconds.");
-            
+            // Equip players with test equipment
+            equipmentManager.giveEquipment(player, new ItemStack(Material.DIAMOND_AXE), "test_equipment", sessionId);
         });
-
-        sessionRegistry.getSession(sessionId);
     }
     
     @Override
