@@ -6,7 +6,8 @@ import nc.randomEvents.services.EquipmentManager;
 import nc.randomEvents.services.RewardGenerator;
 import nc.randomEvents.utils.GiveItemHelper;
 import nc.randomEvents.services.RewardGenerator.Tier;
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -31,7 +32,7 @@ public class Test2Event extends BaseEvent {
     @Override
     public void onStart(UUID sessionId, Set<Player> players) {
         players.forEach(player -> {
-            player.sendMessage(ChatColor.GREEN + "Test2Event has started! Will tick for 10 seconds.");
+            player.sendMessage(Component.text("Test2Event has started! Will tick for 10 seconds.").color(NamedTextColor.GREEN));
             // Equip players with test equipment
             equipmentManager.giveEquipment(player, new ItemStack(Material.DIAMOND_AXE), "test_equipment", sessionId);
         });
@@ -40,14 +41,14 @@ public class Test2Event extends BaseEvent {
     @Override
     public void onTick(UUID sessionId, Set<Player> players) {
         players.forEach(player -> {
-            player.sendMessage(ChatColor.YELLOW + "Test2Event tick!");
+            player.sendMessage(Component.text("Test2Event tick!").color(NamedTextColor.YELLOW));
         });
     }
     
     @Override
     public void onEnd(UUID sessionId, Set<Player> players) {
         players.forEach(player -> {
-            player.sendMessage(ChatColor.RED + "Test2Event has ended!");
+            player.sendMessage(Component.text("Test2Event has ended!").color(NamedTextColor.RED));
             
             // Generate rewards that players keep
             List<ItemStack> rewards = rewardGenerator.generateRewards(

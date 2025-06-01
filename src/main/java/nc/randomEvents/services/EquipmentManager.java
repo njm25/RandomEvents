@@ -4,6 +4,8 @@ import nc.randomEvents.RandomEvents;
 import nc.randomEvents.utils.GiveItemHelper;
 import nc.randomEvents.utils.PersistentDataHelper;
 import nc.randomEvents.core.SessionParticipant;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.block.*;
 import org.bukkit.entity.*;
@@ -183,7 +185,7 @@ public class EquipmentManager implements Listener, SessionParticipant {
                 player.getInventory().setItemInOffHand(null);
                 
                 // Inform the player
-                player.sendMessage(ChatColor.GOLD + "[Event] Your inventory has been temporarily stored for this event.");
+                player.sendMessage(Component.text("[Event] Your inventory has been temporarily stored for this event.").color(NamedTextColor.GOLD));
             }
         }
     }
@@ -206,7 +208,7 @@ public class EquipmentManager implements Listener, SessionParticipant {
                         
                         // Restore the original inventory
                         entry.getValue().restore(player);
-                        player.sendMessage(ChatColor.GOLD + "[Event] Your inventory has been restored.");
+                        player.sendMessage(Component.text("[Event] Your inventory has been restored.").color(NamedTextColor.GOLD));
                     }
                 }
                 
@@ -624,13 +626,14 @@ public class EquipmentManager implements Listener, SessionParticipant {
     public void onInventoryDrag(InventoryDragEvent event) {
         if (!(event.getWhoClicked() instanceof Player)) return;
         
-        ItemStack cursorItem = event.getCursor();
+        ItemStack draggedItem = event.getOldCursor();
+        Inventory topInventory = event.getView().getTopInventory();
         
-        // If dragging an event item
-        if (cursorItem != null && isEventEquipment(cursorItem)) {
+        // If we have an event item being dragged
+        if (draggedItem != null && isEventEquipment(draggedItem)) {
             // Check if any of the slots being dragged to are in the top inventory
             for (int slot : event.getRawSlots()) {
-                if (slot < event.getView().getTopInventory().getSize()) {
+                if (slot < topInventory.getSize()) {
                     event.setCancelled(true);
                     return;
                 }
@@ -741,45 +744,59 @@ public class EquipmentManager implements Listener, SessionParticipant {
         Player player = (Player) event.getWhoClicked();
         ItemStack clickedItem = event.getCurrentItem();
         ItemStack cursorItem = event.getCursor();
+        Inventory clickedInventory = event.getClickedInventory();
         
         // Handle shift-clicking
         if (event.isShiftClick()) {
             if (clickedItem != null && isEventEquipment(clickedItem)) {
-                // Cancel if trying to shift-click into top inventory
-                if (event.getView().getTopInventory() != player.getInventory()) {
+                if (clickedInventory == player.getInventory() && event.getView().getType() == InventoryType.CRAFTING) {
+                    return;
+                }
+                Inventory destinationInventory = (clickedInventory == player.getInventory()) ? 
+                    event.getView().getTopInventory() : player.getInventory();
+                
+                // Only allow if destination is player inventory
+                if (destinationInventory != player.getInventory()) {
                     event.setCancelled(true);
                 }
                 return;
             }
         }
         
-        // Handle number key clicks (1-9) and drag-splitting
+        // Handle number key clicks (1-9) and drops
         if (event.getClick() == ClickType.NUMBER_KEY || 
             event.getClick() == ClickType.DROP || 
             event.getClick() == ClickType.CONTROL_DROP) {
+            
             if (clickedItem != null && isEventEquipment(clickedItem)) {
-                // Cancel if trying to move into top inventory
-                if (event.getView().getTopInventory() != player.getInventory()) {
+                // For number key clicks and drops, check if the destination is the player's inventory
+                Inventory destinationInventory = (clickedInventory == player.getInventory()) ? 
+                    event.getView().getTopInventory() : player.getInventory();
+                
+                // Cancel if destination is not player's inventory
+                if (destinationInventory != player.getInventory()) {
                     event.setCancelled(true);
                 }
                 return;
             }
         }
         
-        // If clicking with event item in cursor
+        // Handle even splits and drag-splits
         if (cursorItem != null && isEventEquipment(cursorItem)) {
-            // Only allow dropping back into player's own inventory
-            if (event.getClickedInventory() == player.getInventory()) {
-                return; // Allow the click
+            // If we're in a crafting table or other container
+            if (event.getView().getType() != InventoryType.CRAFTING) {
+                // Only allow splits within the player inventory
+                if (clickedInventory != player.getInventory()) {
+                    event.setCancelled(true);
+                    return;
+                }
             }
-            event.setCancelled(true);
-            return;
         }
         
         // If clicking on an event item
         if (clickedItem != null && isEventEquipment(clickedItem)) {
             // Only allow if it's in player's own inventory
-            if (event.getClickedInventory() == player.getInventory()) {
+            if (clickedInventory == player.getInventory()) {
                 return; // Allow the click
             }
             event.setCancelled(true);
@@ -817,6 +834,6 @@ public class EquipmentManager implements Listener, SessionParticipant {
         player.getInventory().setArmorContents(null);
         player.getInventory().setItemInOffHand(null);
         
-        player.sendMessage(ChatColor.GOLD + "[Event] Your inventory has been temporarily stored for this event.");
+        player.sendMessage(Component.text("[Event] Your inventory has been temporarily stored for this event.").color(NamedTextColor.GOLD));
     }
 } 
