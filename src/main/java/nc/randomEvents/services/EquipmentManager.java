@@ -7,8 +7,6 @@ import nc.randomEvents.core.SessionParticipant;
 import org.bukkit.*;
 import org.bukkit.block.*;
 import org.bukkit.entity.*;
-import org.bukkit.entity.minecart.HopperMinecart;
-import org.bukkit.entity.minecart.StorageMinecart;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
@@ -30,9 +28,83 @@ public class EquipmentManager implements Listener, SessionParticipant {
     private static final String EQUIPMENT_KEY = "equipment";
     private static final String EQUIPMENT_ID_KEY = "equipment_id";
     private static final String EQUIPMENT_SESSION_KEY = "equipment_session";
+    private final SessionRegistry sessionRegistry;
+    
+    // Map to store stripped inventories: sessionId -> (playerUUID -> StoredInventory)
+    private final Map<UUID, Map<UUID, StoredInventory>> strippedInventories = new HashMap<>();
+
+    private static class StoredInventory {
+        private final ItemStack[] inventory;
+        private final ItemStack[] armor;
+        private final ItemStack offhand;
+
+        public StoredInventory(Player player) {
+            this.inventory = player.getInventory().getContents().clone();
+            this.armor = player.getInventory().getArmorContents().clone();
+            this.offhand = player.getInventory().getItemInOffHand().clone();
+        }
+
+        private boolean isArmorSlot(int index) {
+            // Slots 36 to 39 are armor in vanilla Minecraft inventory indexing
+            return index >= 36 && index <= 39;
+        }
+        
+        private boolean isOffhandSlot(int index) {
+            // Slot 40 is offhand in vanilla inventory indexing
+            return index == 40;
+        }
+        
+        public void restore(Player player) {
+            // Store current inventory items to preserve them
+            ItemStack[] currentInventory = player.getInventory().getContents().clone();
+            ItemStack[] currentArmor = player.getInventory().getArmorContents().clone();
+            ItemStack currentOffhand = player.getInventory().getItemInOffHand().clone();
+
+            // Clear inventory to start fresh
+            player.getInventory().clear();
+            player.getInventory().setArmorContents(null);
+            player.getInventory().setItemInOffHand(null);
+
+            // Create new armor array for merging
+            ItemStack[] newArmor = new ItemStack[4];
+            
+            // Merge armor - prefer current armor over stored armor
+            for (int i = 0; i < armor.length; i++) {
+                if (currentArmor[i] != null) {
+                    newArmor[i] = currentArmor[i].clone();
+                } else if (armor[i] != null) {
+                    newArmor[i] = armor[i].clone();
+                }
+            }
+            player.getInventory().setArmorContents(newArmor);
+
+            // Restore offhand - prefer current over stored
+            if (currentOffhand != null) {
+                player.getInventory().setItemInOffHand(currentOffhand.clone());
+            } else if (offhand != null) {
+                player.getInventory().setItemInOffHand(offhand.clone());
+            }
+
+            // Restore original inventory items using GiveItemHelper, skipping armor slots
+            for (int i = 0; i < inventory.length; i++) {
+                if (inventory[i] != null && !isArmorSlot(i) && !isOffhandSlot(i)) {
+                    GiveItemHelper.giveItemToPlayer(player, inventory[i].clone());
+                }
+            }
+
+            // Restore current inventory items, skipping armor slots
+            for (int i = 0; i < currentInventory.length; i++) {
+                ItemStack item = currentInventory[i];
+                if (item != null && !isArmorSlot(i) && !isOffhandSlot(i)) {
+                    GiveItemHelper.giveItemToPlayer(player, item.clone());
+                }
+            }
+        }
+    }
 
     public EquipmentManager(RandomEvents plugin) {
         this.plugin = plugin;
+        this.sessionRegistry = plugin.getSessionRegistry();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
         plugin.getSessionRegistry().registerParticipant(this);
         plugin.getLogger().info("EquipmentManager initialized");
@@ -91,11 +163,60 @@ public class EquipmentManager implements Listener, SessionParticipant {
     @Override
     public void onSessionStart(UUID sessionId) {
         plugin.getLogger().info("EquipmentManager tracking new session: " + sessionId);
+        boolean hasStripsInventory = sessionRegistry.getSession(sessionId).getEvent().stripsInventory();
+        
+        if (hasStripsInventory) {
+            // Get all players in the session
+            Set<Player> players = sessionRegistry.getSession(sessionId).getPlayers();
+            
+            // Create a new map for this session
+            Map<UUID, StoredInventory> sessionInventories = new HashMap<>();
+            strippedInventories.put(sessionId, sessionInventories);
+            
+            // Store and clear each player's inventory
+            for (Player player : players) {
+                // Store the inventory
+                sessionInventories.put(player.getUniqueId(), new StoredInventory(player));
+                
+                // Clear the inventory
+                player.getInventory().clear();
+                player.getInventory().setArmorContents(null);
+                player.getInventory().setItemInOffHand(null);
+                
+                // Inform the player
+                player.sendMessage(ChatColor.GOLD + "[Event] Your inventory has been temporarily stored for this event.");
+            }
+        }
     }
 
     @Override
     public void onSessionEnd(UUID sessionId) {
         plugin.getLogger().info("EquipmentManager cleaning up session: " + sessionId);
+
+        boolean hasStripsInventory = this.strippedInventories.containsKey(sessionId);
+        
+        if (hasStripsInventory) {
+            Map<UUID, StoredInventory> sessionInventories = strippedInventories.get(sessionId);
+            if (sessionInventories != null) {
+                // Restore inventories for all players
+                for (Map.Entry<UUID, StoredInventory> entry : sessionInventories.entrySet()) {
+                    Player player = plugin.getServer().getPlayer(entry.getKey());
+                    if (player != null && player.isOnline()) {
+                        // Clear any event items first
+                        cleanupPlayerInventory(player, sessionId);
+                        
+                        // Restore the original inventory
+                        entry.getValue().restore(player);
+                        player.sendMessage(ChatColor.GOLD + "[Event] Your inventory has been restored.");
+                    }
+                }
+                
+                // Remove the session from our tracking
+                strippedInventories.remove(sessionId);
+            }
+        }
+        
+        // Cleanup any remaining event items
         cleanupSession(sessionId);
     }
 
@@ -465,11 +586,19 @@ public class EquipmentManager implements Listener, SessionParticipant {
 
     @EventHandler
     public void onItemSpawn(ItemSpawnEvent event) {
-        // Only cancel if it's an event item being spawned by something other than a player drop
-        if (isEventEquipment(event.getEntity().getItemStack()) && 
-            event.getEntity().getThrower() == null) {
-            event.setCancelled(true);
+        // If it's not event equipment, allow it
+        if (!isEventEquipment(event.getEntity().getItemStack())) {
+            return;
         }
+        
+        // Allow drops from inventory overflow (which have a default pickup delay)
+        // and player drops (which have a thrower)
+        if (event.getEntity().getPickupDelay() == 10 || event.getEntity().getThrower() != null) {
+            return;
+        }
+        
+        // Cancel other event item spawns
+        event.setCancelled(true);
     }
 
     @EventHandler
@@ -496,7 +625,6 @@ public class EquipmentManager implements Listener, SessionParticipant {
     public void onInventoryDrag(InventoryDragEvent event) {
         if (!(event.getWhoClicked() instanceof Player)) return;
         
-        Player player = (Player) event.getWhoClicked();
         ItemStack cursorItem = event.getCursor();
         
         // If dragging an event item
@@ -547,6 +675,24 @@ public class EquipmentManager implements Listener, SessionParticipant {
                 player.setItemOnCursor(null);
             } else if (cursorItem.getType().name().contains("SHULKER_BOX")) {
                 cleanupShulkerBox(cursorItem, cursorSessionId);
+            }
+        }
+        
+        // Handle inventory restoration if player leaves during a session
+        for (Map.Entry<UUID, Map<UUID, StoredInventory>> sessionEntry : strippedInventories.entrySet()) {
+            UUID sessionId = sessionEntry.getKey();
+            Map<UUID, StoredInventory> sessionInventories = sessionEntry.getValue();
+            
+            StoredInventory storedInventory = sessionInventories.get(player.getUniqueId());
+            if (storedInventory != null) {
+                // Clean any event items
+                cleanupPlayerInventory(player, sessionId);
+                
+                // Restore their inventory
+                storedInventory.restore(player);
+                sessionInventories.remove(player.getUniqueId());
+                
+                plugin.getLogger().info("Restored inventory for player " + player.getName() + " who left during session " + sessionId);
             }
         }
     }
@@ -654,5 +800,30 @@ public class EquipmentManager implements Listener, SessionParticipant {
         if (isEventEquipment(event.getPlayerItem())) {
             event.setCancelled(true);
         }
+    }
+
+    /**
+     * Handles stripping inventory for a player joining an active session
+     * @param player The player joining
+     * @param sessionId The session they're joining
+     */
+    public void handlePlayerJoinSession(Player player, UUID sessionId) {
+        if (!sessionRegistry.getSession(sessionId).getEvent().stripsInventory()) {
+            return;
+        }
+        
+        Map<UUID, StoredInventory> sessionInventories = strippedInventories.get(sessionId);
+        if (sessionInventories == null) {
+            sessionInventories = new HashMap<>();
+            strippedInventories.put(sessionId, sessionInventories);
+        }
+        
+        // Store and clear their inventory
+        sessionInventories.put(player.getUniqueId(), new StoredInventory(player));
+        player.getInventory().clear();
+        player.getInventory().setArmorContents(null);
+        player.getInventory().setItemInOffHand(null);
+        
+        player.sendMessage(ChatColor.GOLD + "[Event] Your inventory has been temporarily stored for this event.");
     }
 } 
