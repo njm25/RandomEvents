@@ -19,6 +19,7 @@ public final class RandomEvents extends JavaPlugin {
     private DisableManager disableManager;
     private CommandManager commandManager;
     private StartManager startManager;
+    private BlockManager blockManager;
 
     @Override
     public void onEnable() {
@@ -85,6 +86,10 @@ public final class RandomEvents extends JavaPlugin {
         this.disableManager = disableManager;
     }
 
+    public void setBlockManager(BlockManager blockManager) {
+        this.blockManager = blockManager;
+    }
+
     // #endregion Setters
 
     // #region Getters
@@ -127,6 +132,10 @@ public final class RandomEvents extends JavaPlugin {
 
     public CommandManager getCommandManager() {
         return commandManager;
+    }
+
+    public BlockManager getBlockManager() {
+        return blockManager;
     }
 
     // #endregion Getters

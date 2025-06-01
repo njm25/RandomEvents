@@ -7,6 +7,8 @@ import nc.randomEvents.core.SessionParticipant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.bukkit.entity.Player;
+
 public class SessionRegistry {
     private final Map<UUID, EventSession> activeSessions = new ConcurrentHashMap<>();
     private final Set<SessionParticipant> participants = new HashSet<>();
@@ -63,6 +65,20 @@ public class SessionRegistry {
      */
     public EventSession getSession(UUID sessionId) {
         return activeSessions.get(sessionId);
+    }
+
+    /**
+     * Get the session ID for a player
+     * @param player The player to get the session ID for
+     * @return The session ID, or null if the player is not in any session
+     */
+    public UUID getSessionIdForPlayer(Player player) {
+        for (EventSession session : activeSessions.values()) {
+            if (session.getPlayers().contains(player)) {
+                return session.getSessionId();
+            }
+        }
+        return null;
     }
     
     /**

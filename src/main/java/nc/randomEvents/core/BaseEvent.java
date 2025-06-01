@@ -8,6 +8,8 @@ public abstract class BaseEvent {
     private long tickInterval = 20L; // Default 1 second
     private long duration = 0; // Default no duration
     private boolean stripsInventory = false; // Default no inventory stripping
+    private boolean canBreakBlocks = true; // Default can break blocks
+    private boolean canPlaceBlocks = true; // Default can place blocks
     
     /**
      * Called when the event session starts
@@ -42,6 +44,20 @@ public abstract class BaseEvent {
     public boolean stripsInventory() {
         return stripsInventory;
     }
+
+    /**
+     * @return Whether the event can break blocks
+     */
+    public boolean canBreakBlocks() {
+        return canBreakBlocks;
+    }
+
+    /**
+     * @return Whether the event can place blocks
+     */
+    public boolean canPlaceBlocks() {
+        return canPlaceBlocks;
+    }
     
     /**
      * @param tickInterval The interval in ticks between onTick calls
@@ -69,6 +85,20 @@ public abstract class BaseEvent {
      */
     protected void setStripsInventory(boolean stripsInventory) {
         this.stripsInventory = stripsInventory;
+    }
+
+    /**
+     * @param canBreakBlocks Whether the event can break blocks
+     */
+    protected void setCanBreakBlocks(boolean canBreakBlocks) {
+        this.canBreakBlocks = canBreakBlocks;
+    }   
+
+    /**
+     * @param canPlaceBlocks Whether the event can place blocks
+     */
+    protected void setCanPlaceBlocks(boolean canPlaceBlocks) {
+        this.canPlaceBlocks = canPlaceBlocks;
     }
     
     /**

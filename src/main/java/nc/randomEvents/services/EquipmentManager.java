@@ -10,7 +10,6 @@ import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
-import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.inventory.*;
@@ -786,12 +785,6 @@ public class EquipmentManager implements Listener, SessionParticipant {
             event.setCancelled(true);
             return;
         }
-    }
-
-    @EventHandler
-    public void onBlockPlace(BlockPlaceEvent event) {
-        // Allow block placement by default
-        // No cancellation needed
     }
 
     @EventHandler

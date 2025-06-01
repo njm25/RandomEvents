@@ -23,7 +23,9 @@ public class Test2Event extends BaseEvent {
         // Configure event timing
         setTickInterval(20L); // Tick every second
         setDuration(200L); // Run for 10 seconds
-        setStripsInventory(true);
+        setStripsInventory(false);
+        setCanBreakBlocks(false);
+        setCanPlaceBlocks(false);
     }
     
     @Override

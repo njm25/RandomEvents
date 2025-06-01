@@ -22,6 +22,7 @@ public class StartManager {
         // Second layer: Services that depend on the registry
         plugin.setDisableManager(new DisableManager(plugin));
         plugin.setEquipmentManager(new EquipmentManager(plugin));
+        plugin.setBlockManager(new BlockManager(plugin));
         plugin.setTestManager(new TestManager(plugin));
 
         // Third layer: Event system that coordinates everything
