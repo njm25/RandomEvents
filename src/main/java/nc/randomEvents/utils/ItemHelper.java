@@ -155,31 +155,44 @@ public class ItemHelper {
      * @param lore The lore lines
      * @return The created ItemStack
      */
-    public static ItemStack createFullItem(Material material, int count, String name, TextColor titleColor, TextColor loreColor, Map<Enchantment, Integer> enchantments, String... lore) {
-        ItemStack item = createItemWithLore(material, count, name, titleColor, loreColor, lore);
-        
-        if (material == Material.BOOK && enchantments != null && !enchantments.isEmpty()) {
-            // Convert to enchanted book by creating a new ItemStack
-            item = new ItemStack(Material.ENCHANTED_BOOK, item.getAmount());
-            EnchantmentStorageMeta meta = (EnchantmentStorageMeta) item.getItemMeta();
-            if (meta != null) {
-                for (Map.Entry<Enchantment, Integer> entry : enchantments.entrySet()) {
-                    meta.addStoredEnchant(entry.getKey(), entry.getValue(), true);
-                }
-                item.setItemMeta(meta);
+private static ItemStack convertToEnchantedBook(ItemStack item, Map<Enchantment, Integer> enchantments) {
+    ItemMeta originalMeta = item.getItemMeta();
+    ItemStack enchantedBook = new ItemStack(Material.ENCHANTED_BOOK, item.getAmount());
+    EnchantmentStorageMeta meta = (EnchantmentStorageMeta) enchantedBook.getItemMeta();
+    if (meta != null) {
+        // Preserve original metadata
+        if (originalMeta != null) {
+            if (originalMeta.hasDisplayName()) {
+                meta.displayName(originalMeta.displayName());
             }
-        } else {
-            ItemMeta meta = item.getItemMeta();
-            if (meta != null && enchantments != null) {
-                for (Map.Entry<Enchantment, Integer> entry : enchantments.entrySet()) {
-                    meta.addEnchant(entry.getKey(), entry.getValue(), true);
-                }
-                item.setItemMeta(meta);
+            if (originalMeta.hasLore()) {
+                meta.lore(originalMeta.lore());
             }
         }
-        return item;
+        for (Map.Entry<Enchantment, Integer> entry : enchantments.entrySet()) {
+            meta.addStoredEnchant(entry.getKey(), entry.getValue(), true);
+        }
+        enchantedBook.setItemMeta(meta);
     }
+    return enchantedBook;
+}
 
+ public static ItemStack createFullItem(Material material, int count, String name, TextColor titleColor, TextColor loreColor, Map<Enchantment, Integer> enchantments, String... lore) {
+     ItemStack item = createItemWithLore(material, count, name, titleColor, loreColor, lore);
+     
+     if (material == Material.BOOK && enchantments != null && !enchantments.isEmpty()) {
+        return convertToEnchantedBook(item, enchantments);
+     } else {
+         ItemMeta meta = item.getItemMeta();
+         if (meta != null && enchantments != null) {
+             for (Map.Entry<Enchantment, Integer> entry : enchantments.entrySet()) {
+                 meta.addEnchant(entry.getKey(), entry.getValue(), true);
+             }
+             item.setItemMeta(meta);
+         }
+     }
+     return item;
+ }
     /**
      * Creates a visual-only enchanted item (glowing effect)
      * @param material The material of the item
