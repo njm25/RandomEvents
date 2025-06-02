@@ -1,7 +1,7 @@
 package nc.randomEvents.services;
 
 import nc.randomEvents.RandomEvents;
-import nc.randomEvents.utils.GiveItemHelper;
+import nc.randomEvents.utils.ItemHelper;
 import nc.randomEvents.utils.PersistentDataHelper;
 import nc.randomEvents.core.SessionParticipant;
 import net.kyori.adventure.text.Component;
@@ -86,10 +86,10 @@ public class EquipmentManager implements Listener, SessionParticipant {
                 player.getInventory().setItemInOffHand(offhand.clone());
             }
 
-            // Restore original inventory items using GiveItemHelper, skipping armor slots
+            // Restore original inventory items using ItemHelper, skipping armor slots
             for (int i = 0; i < inventory.length; i++) {
                 if (inventory[i] != null && !isArmorSlot(i) && !isOffhandSlot(i)) {
-                    GiveItemHelper.giveItemToPlayer(player, inventory[i].clone());
+                    ItemHelper.giveItemToPlayer(player, inventory[i].clone());
                 }
             }
 
@@ -97,7 +97,7 @@ public class EquipmentManager implements Listener, SessionParticipant {
             for (int i = 0; i < currentInventory.length; i++) {
                 ItemStack item = currentInventory[i];
                 if (item != null && !isArmorSlot(i) && !isOffhandSlot(i)) {
-                    GiveItemHelper.giveItemToPlayer(player, item.clone());
+                    ItemHelper.giveItemToPlayer(player, item.clone());
                 }
             }
         }
@@ -132,7 +132,7 @@ public class EquipmentManager implements Listener, SessionParticipant {
         }
 
         // Try to give the item to the player
-        GiveItemHelper.giveItemToPlayer(player, item);
+        ItemHelper.giveItemToPlayer(player, item);
     }
 
     /**
@@ -157,7 +157,7 @@ public class EquipmentManager implements Listener, SessionParticipant {
                 item.setItemMeta(meta);
             }
 
-            GiveItemHelper.giveItemToPlayer(player, item);
+            ItemHelper.giveItemToPlayer(player, item);
         }
     }
 

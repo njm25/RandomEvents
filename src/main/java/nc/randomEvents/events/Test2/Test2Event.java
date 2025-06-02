@@ -4,7 +4,7 @@ import nc.randomEvents.RandomEvents;
 import nc.randomEvents.core.BaseEvent;
 import nc.randomEvents.services.EquipmentManager;
 import nc.randomEvents.services.RewardGenerator;
-import nc.randomEvents.utils.GiveItemHelper;
+import nc.randomEvents.utils.ItemHelper;
 import nc.randomEvents.services.RewardGenerator.Tier;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -60,7 +60,7 @@ public class Test2Event extends BaseEvent {
             
             // Give rewards to players
             for (ItemStack reward : rewards) {
-                GiveItemHelper.giveItemToPlayer(player, reward);
+                ItemHelper.giveItemToPlayer(player, reward);
             }
         });
     }
