@@ -27,7 +27,7 @@ public class CommandManager implements CommandExecutor, TabCompleter {
         registerSubCommand("AddWorld", new AddWorldCommand(plugin));
         registerSubCommand("RemoveWorld", new RemoveWorldCommand(plugin));
         registerSubCommand("Reload", new ReloadCommand(plugin));
-   
+        registerSubCommand("List", new ListCommand(plugin));
 
         // Register the main command and its alias with Bukkit
         PluginCommand mainCommand = plugin.getCommand("randomevents");
@@ -83,6 +83,10 @@ public class CommandManager implements CommandExecutor, TabCompleter {
                 return ((AddWorldCommand) subCmd).onTabComplete(sender, args);
             } else if (subCmd instanceof RemoveWorldCommand) {
                 return ((RemoveWorldCommand) subCmd).onTabComplete(sender, args);
+            } else if (subCmd instanceof ListCommand) {
+                return ((ListCommand) subCmd).onTabComplete(sender, args);
+            } else if (subCmd instanceof HelpCommand) {
+                return ((HelpCommand) subCmd).onTabComplete(sender, args);
             }
         }
 

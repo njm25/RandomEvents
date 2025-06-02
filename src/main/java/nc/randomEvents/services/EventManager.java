@@ -71,6 +71,9 @@ public class EventManager {
         return new ArrayList<>(events.keySet());
     }
 
+    public BaseEvent getEvent(String eventName) {
+        return events.get(eventName.toLowerCase());
+    }
 
     /**
      * Clean up all running sessions when the plugin is disabled
