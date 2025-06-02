@@ -1,15 +1,13 @@
 package nc.randomEvents.services;
 
 import nc.randomEvents.RandomEvents;
+import nc.randomEvents.utils.ItemHelper;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.EnchantmentStorageMeta;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.NamespacedKey;
 
 import java.io.File;
 import java.io.InputStreamReader;
@@ -159,7 +157,7 @@ public class RewardGenerator {
                     List<EnchantmentData> enchantments = new ArrayList<>();
                     // Corrected enchantment parsing using getMapList()
                     if (rewardsSection.isList(itemKey + ".enchantments")) {
-                        if (isEnchantable(material)) {
+                        if (ItemHelper.isEnchantable(material)) {
                             List<Map<?, ?>> enchList = rewardsSection.getMapList(itemKey + ".enchantments");
                             if (!enchList.isEmpty()) {
                                 for (Map<?, ?> enchEntry : enchList) {
@@ -173,8 +171,7 @@ public class RewardGenerator {
                                     }
 
                                     if (enchantmentName != null) {
-                                        @SuppressWarnings("deprecation")
-                                        Enchantment bukkitEnchantment = Enchantment.getByKey(NamespacedKey.minecraft(enchantmentName.toLowerCase()));
+                                        Enchantment bukkitEnchantment = ItemHelper.getEnchantment(enchantmentName);
                                         if (bukkitEnchantment != null) {
                                             enchantments.add(new EnchantmentData(bukkitEnchantment, enchantmentLevel));
                                         } else {
@@ -245,56 +242,20 @@ public class RewardGenerator {
                 ItemStack itemStack = new ItemStack(selectedReward.material, amount);
 
                 if (!selectedReward.enchantments.isEmpty()) {
-                    ItemMeta meta = itemStack.getItemMeta();
-                    if (meta != null) {
-                        if (itemStack.getType() == Material.BOOK && amount == 1) { // Only enchant books if amount is 1, standard behavior for enchanted books
-                            EnchantmentStorageMeta bookMeta = (EnchantmentStorageMeta) meta;
-                            for (EnchantmentData enchData : selectedReward.enchantments) {
-                                bookMeta.addStoredEnchant(enchData.enchantment, enchData.level, true);
-                            }
-                            itemStack.setItemMeta(bookMeta);
-                        } else if (itemStack.getType() != Material.BOOK) { // For non-book items
-                            for (EnchantmentData enchData : selectedReward.enchantments) {
-                                meta.addEnchant(enchData.enchantment, enchData.level, true);
-                            }
-                            itemStack.setItemMeta(meta);
-                        }
-                        // If it's a book but amount > 1, or some other non-enchantable scenario with meta, enchantments are not applied.
+                    // Convert EnchantmentData to the format expected by ItemHelper
+                    List<Map<String, Object>> enchantmentList = new ArrayList<>();
+                    for (EnchantmentData enchData : selectedReward.enchantments) {
+                        Map<String, Object> enchMap = new HashMap<>();
+                        enchMap.put("name", enchData.enchantment.getKey().getKey());
+                        enchMap.put("level", enchData.level);
+                        enchantmentList.add(enchMap);
                     }
+                    itemStack = ItemHelper.applyEnchantments(itemStack, enchantmentList);
                 }
                 generatedItems.add(itemStack);
             }
         }
         return generatedItems;
-    }
-
-    private boolean isEnchantable(Material material) {
-        if (material == null) return false;
-        // Books can hold stored enchantments
-        if (material == Material.BOOK) return true;
-        // Check for tools (pickaxes, axes, shovels, hoes, shears, flint and steel, fishing rod, carrot on a stick, warped fungus on a stick)
-        if (material.name().endsWith("_PICKAXE") || material.name().endsWith("_AXE") || material.name().endsWith("_SHOVEL") || material.name().endsWith("_HOE") ||
-            material == Material.SHEARS || material == Material.FLINT_AND_STEEL || material == Material.FISHING_ROD ||
-            material == Material.CARROT_ON_A_STICK || material == Material.WARPED_FUNGUS_ON_A_STICK) {
-            return true;
-        }
-        // Check for weapons (swords, bows, crossbow, trident)
-        if (material.name().endsWith("_SWORD") || material == Material.BOW || material == Material.CROSSBOW || material == Material.TRIDENT) {
-            return true;
-        }
-        // Check for armor (helmets, chestplates, leggings, boots, elytra, turtle shell)
-        if (material.name().endsWith("_HELMET") || material.name().endsWith("_CHESTPLATE") || material.name().endsWith("_LEGGINGS") || material.name().endsWith("_BOOTS") ||
-            material == Material.ELYTRA || material == Material.TURTLE_HELMET) {
-            return true;
-        }
-
-        // Check for enchanted book
-        if (material == Material.ENCHANTED_BOOK) {
-            return true;
-        }
-        // Add any other specific items that are enchantable but don't fit general categories
-        // e.g. Shield, Trident
-        return material == Material.SHIELD;
     }
 
     /**

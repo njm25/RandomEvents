@@ -41,24 +41,22 @@ public class EquipmentManager implements Listener, SessionParticipant {
 
         public StoredInventory(Player player) {
             this.inventory = player.getInventory().getContents().clone();
-            this.armor = player.getInventory().getArmorContents().clone();
+            this.armor = ItemHelper.cloneArmorContents(player.getInventory().getArmorContents());
             this.offhand = player.getInventory().getItemInOffHand().clone();
         }
 
         private boolean isArmorSlot(int index) {
-            // Slots 36 to 39 are armor in vanilla Minecraft inventory indexing
-            return index >= 36 && index <= 39;
+            return ItemHelper.isArmorSlot(index);
         }
         
         private boolean isOffhandSlot(int index) {
-            // Slot 40 is offhand in vanilla inventory indexing
-            return index == 40;
+            return ItemHelper.isOffhandSlot(index);
         }
         
         public void restore(Player player) {
             // Store current inventory items to preserve them
             ItemStack[] currentInventory = player.getInventory().getContents().clone();
-            ItemStack[] currentArmor = player.getInventory().getArmorContents().clone();
+            ItemStack[] currentArmor = ItemHelper.cloneArmorContents(player.getInventory().getArmorContents());
             ItemStack currentOffhand = player.getInventory().getItemInOffHand().clone();
 
             // Clear inventory to start fresh
