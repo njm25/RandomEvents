@@ -2,6 +2,7 @@ package nc.randomEvents.services;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.utils.PersistentDataHelper;
+import nc.randomEvents.utils.EntityHelper;
 import nc.randomEvents.utils.AttributeHelper;
 import nc.randomEvents.core.SessionParticipant;
 import org.bukkit.*;
@@ -61,42 +62,6 @@ public class EntityManager implements Listener, SessionParticipant {
             return (T) entity;
         }
         return null;
-    }
-
-    /**
-     * Fluent helper to set common attributes
-     */
-    public EntityManager setMaxHealth(LivingEntity entity, double health) {
-        AttributeInstance attribute = entity.getAttribute(AttributeHelper.getAttributeSafely("MAX_HEALTH"));
-        if (attribute != null) {
-            attribute.setBaseValue(health);
-            entity.setHealth(health);
-        }
-        return this;
-    }
-
-    public EntityManager setMovementSpeed(LivingEntity entity, double speed) {
-        AttributeInstance attribute = entity.getAttribute(AttributeHelper.getAttributeSafely("MOVEMENT_SPEED"));
-        if (attribute != null) {
-            attribute.setBaseValue(speed);
-        }
-        return this;
-    }
-
-    public EntityManager setCustomName(Entity entity, String name) {
-        entity.customName(Component.text(name));
-        entity.setCustomNameVisible(true);
-        return this;
-    }
-
-    public EntityManager setGlowing(Entity entity, boolean glowing) {
-        entity.setGlowing(glowing);
-        return this;
-    }
-
-    public EntityManager preventItemDrops(LivingEntity entity) {
-        entity.setCanPickupItems(false);
-        return this;
     }
 
     @Override
