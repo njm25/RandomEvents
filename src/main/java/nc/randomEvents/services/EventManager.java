@@ -3,8 +3,9 @@ package nc.randomEvents.services;
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.core.BaseEvent;
 import nc.randomEvents.core.EventSession;
-import nc.randomEvents.events.Test2.Test2Event;
-import nc.randomEvents.events.Test.TestEvent;
+import nc.randomEvents.events.Test.EquipmentManagerTest.EquipmentManagerTest;
+import nc.randomEvents.events.Test.ItemHelperTest.ItemHelperTest;
+import nc.randomEvents.events.Test.BaseEventTest.BaseEventTest;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -28,8 +29,9 @@ public class EventManager {
 
     private void registerEvents() {
         // Register test events
-        addEvent(new Test2Event(plugin));
-        addEvent(new TestEvent(plugin));
+        addEvent(new EquipmentManagerTest(plugin));
+        addEvent(new ItemHelperTest(plugin));
+        addEvent(new BaseEventTest(plugin));
     }
 
     public void addEvent(BaseEvent event) {

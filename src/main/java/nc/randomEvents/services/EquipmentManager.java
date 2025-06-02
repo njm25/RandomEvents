@@ -1,7 +1,7 @@
 package nc.randomEvents.services;
 
 import nc.randomEvents.RandomEvents;
-import nc.randomEvents.utils.GiveItemHelper;
+import nc.randomEvents.utils.ItemHelper;
 import nc.randomEvents.utils.PersistentDataHelper;
 import nc.randomEvents.core.SessionParticipant;
 import net.kyori.adventure.text.Component;
@@ -41,24 +41,22 @@ public class EquipmentManager implements Listener, SessionParticipant {
 
         public StoredInventory(Player player) {
             this.inventory = player.getInventory().getContents().clone();
-            this.armor = player.getInventory().getArmorContents().clone();
+            this.armor = ItemHelper.cloneArmorContents(player.getInventory().getArmorContents());
             this.offhand = player.getInventory().getItemInOffHand().clone();
         }
 
         private boolean isArmorSlot(int index) {
-            // Slots 36 to 39 are armor in vanilla Minecraft inventory indexing
-            return index >= 36 && index <= 39;
+            return ItemHelper.isArmorSlot(index);
         }
         
         private boolean isOffhandSlot(int index) {
-            // Slot 40 is offhand in vanilla inventory indexing
-            return index == 40;
+            return ItemHelper.isOffhandSlot(index);
         }
         
         public void restore(Player player) {
             // Store current inventory items to preserve them
             ItemStack[] currentInventory = player.getInventory().getContents().clone();
-            ItemStack[] currentArmor = player.getInventory().getArmorContents().clone();
+            ItemStack[] currentArmor = ItemHelper.cloneArmorContents(player.getInventory().getArmorContents());
             ItemStack currentOffhand = player.getInventory().getItemInOffHand().clone();
 
             // Clear inventory to start fresh
@@ -86,10 +84,10 @@ public class EquipmentManager implements Listener, SessionParticipant {
                 player.getInventory().setItemInOffHand(offhand.clone());
             }
 
-            // Restore original inventory items using GiveItemHelper, skipping armor slots
+            // Restore original inventory items using ItemHelper, skipping armor slots
             for (int i = 0; i < inventory.length; i++) {
                 if (inventory[i] != null && !isArmorSlot(i) && !isOffhandSlot(i)) {
-                    GiveItemHelper.giveItemToPlayer(player, inventory[i].clone());
+                    ItemHelper.giveItemToPlayer(player, inventory[i].clone());
                 }
             }
 
@@ -97,7 +95,7 @@ public class EquipmentManager implements Listener, SessionParticipant {
             for (int i = 0; i < currentInventory.length; i++) {
                 ItemStack item = currentInventory[i];
                 if (item != null && !isArmorSlot(i) && !isOffhandSlot(i)) {
-                    GiveItemHelper.giveItemToPlayer(player, item.clone());
+                    ItemHelper.giveItemToPlayer(player, item.clone());
                 }
             }
         }
@@ -132,7 +130,7 @@ public class EquipmentManager implements Listener, SessionParticipant {
         }
 
         // Try to give the item to the player
-        GiveItemHelper.giveItemToPlayer(player, item);
+        ItemHelper.giveItemToPlayer(player, item);
     }
 
     /**
@@ -157,7 +155,7 @@ public class EquipmentManager implements Listener, SessionParticipant {
                 item.setItemMeta(meta);
             }
 
-            GiveItemHelper.giveItemToPlayer(player, item);
+            ItemHelper.giveItemToPlayer(player, item);
         }
     }
 
