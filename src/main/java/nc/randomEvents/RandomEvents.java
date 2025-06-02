@@ -20,6 +20,7 @@ public final class RandomEvents extends JavaPlugin {
     private CommandManager commandManager;
     private StartManager startManager;
     private BlockManager blockManager;
+    private EntityManager entityManager;
 
     @Override
     public void onEnable() {
@@ -90,6 +91,10 @@ public final class RandomEvents extends JavaPlugin {
         this.blockManager = blockManager;
     }
 
+    public void setEntityManager(EntityManager entityManager) {
+        this.entityManager = entityManager;
+    }
+
     // #endregion Setters
 
     // #region Getters
@@ -136,6 +141,10 @@ public final class RandomEvents extends JavaPlugin {
 
     public BlockManager getBlockManager() {
         return blockManager;
+    }
+
+    public EntityManager getEntityManager() {
+        return entityManager;
     }
 
     // #endregion Getters

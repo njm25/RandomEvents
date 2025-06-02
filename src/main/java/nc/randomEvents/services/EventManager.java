@@ -6,6 +6,7 @@ import nc.randomEvents.core.EventSession;
 import nc.randomEvents.events.Test.EquipmentManagerTest.EquipmentManagerTest;
 import nc.randomEvents.events.Test.ItemHelperTest.ItemHelperTest;
 import nc.randomEvents.events.Test.BaseEventTest.BaseEventTest;
+import nc.randomEvents.events.Test.EntityManagerTest.EntityManagerTest;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -32,6 +33,7 @@ public class EventManager {
         addEvent(new EquipmentManagerTest(plugin));
         addEvent(new ItemHelperTest(plugin));
         addEvent(new BaseEventTest(plugin));
+        addEvent(new EntityManagerTest(plugin));
     }
 
     public void addEvent(BaseEvent event) {
