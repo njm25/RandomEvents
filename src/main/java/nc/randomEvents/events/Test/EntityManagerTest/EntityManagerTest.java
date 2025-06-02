@@ -168,15 +168,19 @@ public class EntityManagerTest extends BaseEvent {
             center.getWorld(), center, EntityType.SKELETON, 6, 4.0, 0
         );
         
-        for (Entity entity : ringEntities) {
-            if (entity instanceof Skeleton skeleton) {
-                entityManager.spawnTracked(EntityType.SKELETON, skeleton.getLocation(), "ring_skeleton", sessionId);
-                skeleton.customName(Component.text("Ring Skeleton"));
-                skeleton.setCustomNameVisible(true);
-                EntityHelper.setMaxHealth(skeleton, 20.0);
-                EntityHelper.setMovementSpeed(skeleton, 0.0);
-                entities.add(skeleton);
-            }
+        for (int i = 0; i < ringEntities.length; i++) {
+            Location loc = ringEntities[i].getLocation();
+            // Remove helper-spawned entity and replace with a tracked one
+            ringEntities[i].remove();
+
+            Skeleton skeleton = entityManager.spawnTracked(
+                    EntityType.SKELETON, loc, "ring_skeleton_" + i, sessionId);
+
+            skeleton.customName(Component.text("Ring Skeleton"));
+            skeleton.setCustomNameVisible(true);
+            EntityHelper.setMaxHealth(skeleton, 20.0);
+            EntityHelper.setMovementSpeed(skeleton, 0.0);
+            entities.add(skeleton);
         }
         
         player.sendMessage(Component.text("Demonstrating entity ring formation..."));
