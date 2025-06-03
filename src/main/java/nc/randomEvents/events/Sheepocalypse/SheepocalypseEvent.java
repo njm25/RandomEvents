@@ -21,6 +21,7 @@ import org.bukkit.event.HandlerList;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -46,7 +47,6 @@ public class SheepocalypseEvent extends BaseEvent implements Listener {
         
         // Register events immediately and log it
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
-        plugin.getLogger().info("[DEBUG] SheepocalypseEvent: Registered event listeners");
 
         // Configure event settings
         setTickInterval(80L); // Spawn sheep every 4 seconds
@@ -73,21 +73,24 @@ public class SheepocalypseEvent extends BaseEvent implements Listener {
             onEnd(sessionId, players); // Use onEnd instead of stopEvent
         }
 
-        plugin.getLogger().info("[DEBUG] SheepocalypseEvent: Starting event for " + players.size() + " players");
         isEventActive = true;
         isSpawningComplete = false;
         activeSheep.clear();
         givenShears.clear();
 
-        // Re-register event listeners to ensure they're active
-        HandlerList.unregisterAll(this);
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
-        plugin.getLogger().info("[DEBUG] SheepocalypseEvent: Re-registered event listeners");
+
 
         for (Player player : players) {
             ItemStack shears = new ItemStack(Material.SHEARS);
-            player.getInventory().addItem(shears);
+            ItemMeta meta = shears.getItemMeta();
+            meta.displayName(Component.text("Sheep Defuser", NamedTextColor.AQUA).decorate(TextDecoration.ITALIC));
+            meta.lore(List.of(Component.text("Right click on sheep bombs to defuse them", NamedTextColor.GRAY)));
+            shears.setItemMeta(meta);
+            
+            // Give shears using equipment manager
+            plugin.getEquipmentManager().giveEquipment(player, shears, "sheep_defuser", sessionId);
             givenShears.put(player.getUniqueId(), shears);
+            
             player.sendMessage(Component.text("Oh no! ", NamedTextColor.GOLD).decorate(TextDecoration.BOLD)
                 .append(Component.text("The sheep have gone mad! Quick, shear them before they explode!", NamedTextColor.YELLOW)));
         }
