@@ -2,8 +2,6 @@ package nc.randomEvents.services;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.utils.PersistentDataHelper;
-import nc.randomEvents.utils.EntityHelper;
-import nc.randomEvents.utils.AttributeHelper;
 import nc.randomEvents.core.SessionParticipant;
 import org.bukkit.*;
 import org.bukkit.entity.*;
@@ -12,8 +10,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.attribute.AttributeInstance;
-import net.kyori.adventure.text.Component;
 
 import java.util.*;
 

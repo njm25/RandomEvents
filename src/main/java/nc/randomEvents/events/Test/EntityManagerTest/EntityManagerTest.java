@@ -120,6 +120,9 @@ public class EntityManagerTest extends BaseEvent {
                         player.sendMessage(Component.text("EntityManager demonstrations complete!"));
                     }
                     break;
+                case COMPLETE:
+                    break;
+                                    
             }
         });
     }

@@ -3,13 +3,10 @@ package nc.randomEvents.utils;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.Particle;
-import net.kyori.adventure.text.Component;
 
 /**
  * Utility class for manipulating entities and their attributes
