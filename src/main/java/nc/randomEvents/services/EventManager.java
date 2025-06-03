@@ -10,6 +10,7 @@ import nc.randomEvents.events.Test.EntityManagerTest.EntityManagerTest;
 import nc.randomEvents.events.LootGoblin.LootGoblinEvent;
 import nc.randomEvents.events.ZombieHoard.ZombieHoardEvent;
 import nc.randomEvents.events.Sheepocalypse.SheepocalypseEvent;
+import nc.randomEvents.events.Meteor.MeteorEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -40,6 +41,7 @@ public class EventManager {
         addEvent(new LootGoblinEvent(plugin));
         addEvent(new ZombieHoardEvent(plugin));
         addEvent(new SheepocalypseEvent(plugin));
+        addEvent(new MeteorEvent(plugin));
     }
 
     public void addEvent(BaseEvent event) {

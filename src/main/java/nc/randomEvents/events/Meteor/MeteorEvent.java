@@ -1,7 +1,7 @@
 package nc.randomEvents.events.Meteor;
 
 import nc.randomEvents.RandomEvents;
-import nc.randomEvents.events.Event;
+import nc.randomEvents.core.BaseEvent;
 import nc.randomEvents.services.RewardGenerator;
 import nc.randomEvents.services.RewardGenerator.Tier;
 import nc.randomEvents.services.RewardGenerator.TierQuantity;
@@ -9,7 +9,6 @@ import nc.randomEvents.utils.LocationHelper;
 import nc.randomEvents.utils.MetadataHelper;
 import nc.randomEvents.utils.SoundHelper;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.World;
@@ -19,7 +18,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -28,18 +26,28 @@ import net.kyori.adventure.text.format.TextDecoration;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
+import java.util.HashMap;
+import java.util.Map;
 
-public class MeteorEvent implements Event, Listener {
+public class MeteorEvent extends BaseEvent implements Listener {
     private final RandomEvents plugin;
     private final RewardGenerator rewardGenerator;
     private final Random random = new Random();
     private static final String METEOR_METADATA_KEY = "meteor_event_fireball";
     private static final int GROUP_RADIUS = 100; // Radius for grouping players
+    private final Map<UUID, Set<Set<Player>>> sessionGroups = new HashMap<>();
 
     public MeteorEvent(RandomEvents plugin) {
         this.plugin = plugin;
         this.rewardGenerator = plugin.getRewardGenerator();
-        Bukkit.getPluginManager().registerEvents(this, plugin);
+        
+        // Configure base event settings
+        setCanBreakBlocks(false); // Prevent meteor impacts from breaking blocks
+        setCanPlaceBlocks(false); // No block placement needed
+        setStripsInventory(false); // Don't strip player inventories
+        setTickInterval(10L); // Tick every half second
+        setDuration(200L); // 10 second event duration
     }
 
     @Override
@@ -53,44 +61,46 @@ public class MeteorEvent implements Event, Listener {
     }
 
     @Override
-    public void execute(Set<Player> players) {
+    public void onStart(UUID sessionId, Set<Player> players) {
         // Group players within 100 blocks of each other
         Set<Set<Player>> playerGroups = LocationHelper.groupPlayers(players, GROUP_RADIUS);
+        sessionGroups.put(sessionId, playerGroups);
 
         for (Set<Player> group : playerGroups) {
-            // Find the midpoint of this group
-            Location groupMidpoint = LocationHelper.findMidpoint(group);
-            if (groupMidpoint == null) continue;
-
-            // Calculate total meteors based on group size
-            int meteorsPerPlayer = plugin.getConfigManager().getConfigValue(getName(), "amountPerPlayer");
-            final int totalMeteorsForGroup = meteorsPerPlayer * group.size();
-
             // Notify all players in the group
             for (Player player : group) {
                 player.sendMessage(Component.text("Oh no! ", NamedTextColor.GOLD).decorate(TextDecoration.BOLD)
                     .append(Component.text("Look up! A meteor shower is incoming!", NamedTextColor.YELLOW)));
             }
+        }
+    }
+
+    @Override
+    public void onTick(UUID sessionId, Set<Player> players) {
+        Set<Set<Player>> groups = sessionGroups.get(sessionId);
+        if (groups == null) return;
+
+        for (Set<Player> group : groups) {
+            // Find the midpoint of this group
+            Location groupMidpoint = LocationHelper.findMidpoint(group);
+            if (groupMidpoint == null) continue;
+
+            // Calculate meteors per tick based on group size
+            int meteorsPerPlayer = plugin.getConfigManager().getConfigValue(getName(), "amountPerPlayer");
+            int meteorsThisTick = Math.max(1, (meteorsPerPlayer * group.size()) / 20); // Spread over duration
 
             // Spawn meteors for this group
-            new BukkitRunnable() {
-                int meteorsToSpawn = totalMeteorsForGroup;
-                int meteorsSpawned = 0;
-
-                @Override
-                public void run() {
-                    // Check if any players from the group are still online and valid
-                    boolean validGroupExists = group.stream().anyMatch(p -> p.isOnline() && p.isValid());
-                    
-                    if (meteorsSpawned >= meteorsToSpawn || !validGroupExists) {
-                        this.cancel();
-                        return;
-                    }
+            for (int i = 0; i < meteorsThisTick; i++) {
+                if (random.nextDouble() < 0.7) { // 70% chance per tick to spawn meteor
                     spawnMeteorAtLocation(groupMidpoint);
-                    meteorsSpawned++;
                 }
-            }.runTaskTimer(plugin, 0L, random.nextInt(20) + 10L);
+            }
         }
+    }
+
+    @Override
+    public void onEnd(UUID sessionId, Set<Player> players) {
+        sessionGroups.remove(sessionId);
     }
 
     private void spawnMeteorAtLocation(Location targetLoc) {
@@ -153,6 +163,5 @@ public class MeteorEvent implements Event, Listener {
                 }
             }
         }
-        // The fireball will explode on its own based on its properties (yield, incendiary)
     }
 }
