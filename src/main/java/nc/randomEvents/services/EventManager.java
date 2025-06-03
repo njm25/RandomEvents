@@ -7,6 +7,9 @@ import nc.randomEvents.events.Test.EquipmentManagerTest.EquipmentManagerTest;
 import nc.randomEvents.events.Test.ItemHelperTest.ItemHelperTest;
 import nc.randomEvents.events.Test.BaseEventTest.BaseEventTest;
 import nc.randomEvents.events.Test.EntityManagerTest.EntityManagerTest;
+import nc.randomEvents.events.LootGoblin.LootGoblinEvent;
+import nc.randomEvents.events.ZombieHoard.ZombieHoardEvent;
+import nc.randomEvents.events.Sheepocalypse.SheepocalypseEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -34,6 +37,9 @@ public class EventManager {
         addEvent(new ItemHelperTest(plugin));
         addEvent(new BaseEventTest(plugin));
         addEvent(new EntityManagerTest(plugin));
+        addEvent(new LootGoblinEvent(plugin));
+        addEvent(new ZombieHoardEvent(plugin));
+        addEvent(new SheepocalypseEvent(plugin));
     }
 
     public void addEvent(BaseEvent event) {
