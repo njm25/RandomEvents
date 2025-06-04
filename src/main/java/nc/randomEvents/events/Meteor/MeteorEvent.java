@@ -8,46 +8,51 @@ import nc.randomEvents.services.RewardGenerator.TierQuantity;
 import nc.randomEvents.utils.LocationHelper;
 import nc.randomEvents.utils.MetadataHelper;
 import nc.randomEvents.utils.SoundHelper;
+import nc.randomEvents.services.EntityManager;
+import nc.randomEvents.utils.PersistentDataHelper;
 
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.World;
-import org.bukkit.entity.Fireball;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.ProjectileHitEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.SlimeSplitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
+import org.bukkit.persistence.PersistentDataType;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
-import java.util.UUID;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class MeteorEvent extends BaseEvent implements Listener {
     private final RandomEvents plugin;
     private final RewardGenerator rewardGenerator;
     private final Random random = new Random();
     private static final String METEOR_METADATA_KEY = "meteor_event_fireball";
+    private static final String METEOR_SESSION_KEY = "meteor_session";
+    private static final String ENTITY_KEY = "entity";
     private static final int GROUP_RADIUS = 100; // Radius for grouping players
     private final Map<UUID, Set<Set<Player>>> sessionGroups = new HashMap<>();
+    private UUID currentSessionId;
 
     public MeteorEvent(RandomEvents plugin) {
         this.plugin = plugin;
         this.rewardGenerator = plugin.getRewardGenerator();
         
         // Configure base event settings
-        setCanBreakBlocks(false); // Prevent meteor impacts from breaking blocks
-        setCanPlaceBlocks(false); // No block placement needed
-        setStripsInventory(false); // Don't strip player inventories
-        setTickInterval(10L); // Tick every half second
-        setDuration(200L); // 10 second event duration
+        setCanBreakBlocks(false);
+        setCanPlaceBlocks(false);
+        setStripsInventory(false);
+        setTickInterval(10L);
+        setDuration(200L);
+        setClearEntitiesAtEnd(false);
+        
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
     @Override
@@ -62,12 +67,11 @@ public class MeteorEvent extends BaseEvent implements Listener {
 
     @Override
     public void onStart(UUID sessionId, Set<Player> players) {
-        // Group players within 100 blocks of each other
+        this.currentSessionId = sessionId;
         Set<Set<Player>> playerGroups = LocationHelper.groupPlayers(players, GROUP_RADIUS);
         sessionGroups.put(sessionId, playerGroups);
 
         for (Set<Player> group : playerGroups) {
-            // Notify all players in the group
             for (Player player : group) {
                 player.sendMessage(Component.text("Oh no! ", NamedTextColor.GOLD).decorate(TextDecoration.BOLD)
                     .append(Component.text("Look up! A meteor shower is incoming!", NamedTextColor.YELLOW)));
@@ -81,17 +85,14 @@ public class MeteorEvent extends BaseEvent implements Listener {
         if (groups == null) return;
 
         for (Set<Player> group : groups) {
-            // Find the midpoint of this group
             Location groupMidpoint = LocationHelper.findMidpoint(group);
             if (groupMidpoint == null) continue;
 
-            // Calculate meteors per tick based on group size
             int meteorsPerPlayer = plugin.getConfigManager().getConfigValue(getName(), "amountPerPlayer");
-            int meteorsThisTick = Math.max(1, (meteorsPerPlayer * group.size()) / 20); // Spread over duration
+            int meteorsThisTick = Math.max(1, (meteorsPerPlayer * group.size()) / 20);
 
-            // Spawn meteors for this group
             for (int i = 0; i < meteorsThisTick; i++) {
-                if (random.nextDouble() < 0.7) { // 70% chance per tick to spawn meteor
+                if (random.nextDouble() < 0.7) {
                     spawnMeteorAtLocation(groupMidpoint);
                 }
             }
@@ -101,9 +102,49 @@ public class MeteorEvent extends BaseEvent implements Listener {
     @Override
     public void onEnd(UUID sessionId, Set<Player> players) {
         sessionGroups.remove(sessionId);
+        if (sessionId.equals(currentSessionId)) {
+            this.currentSessionId = null;
+        }
+    }
+
+    private void spawnMeteorMob(Location location, Player target, UUID sessionId) {
+        if (sessionId == null) {
+            plugin.getLogger().warning("Attempted to spawn meteor mob with null sessionId");
+            return;
+        }
+
+        double enemySpawnChance = plugin.getConfigManager().getConfigValue(getName(), "enemySpawnChance");
+        enemySpawnChance = Math.max(0.0, Math.min(1.0, enemySpawnChance));
+        
+        EntityManager entityManager = plugin.getEntityManager();
+        LivingEntity entity = null;
+        
+        if (random.nextDouble() < enemySpawnChance) {
+            entity = entityManager.spawnTracked(EntityType.BLAZE, location, "meteor_blaze", sessionId);
+            
+            if (entity instanceof Blaze) {
+                //entity.setAI(false);
+                //entity.setGravity(false);
+                if (target != null) {
+                    ((Monster) entity).setTarget(target);
+                }
+            }
+        }    // If Blaze didn't spawn, try Magma Cube
+        else if (random.nextDouble() < enemySpawnChance) {
+            entity = entityManager.spawnTracked(EntityType.MAGMA_CUBE, location, "meteor_magma", sessionId);
+            if (entity instanceof MagmaCube) {
+                //((MagmaCube) entity).setSize(2);
+                // No need to set target for Magma Cubes - they'll naturally chase nearby players
+            }
+        }
     }
 
     private void spawnMeteorAtLocation(Location targetLoc) {
+        if (currentSessionId == null) {
+            plugin.getLogger().warning("Attempted to spawn meteor with null sessionId");
+            return;
+        }
+
         World world = targetLoc.getWorld();
         if (world == null) return;
         
@@ -120,7 +161,11 @@ public class MeteorEvent extends BaseEvent implements Listener {
         fireball.setYield(0.0F);
         fireball.setIsIncendiary(false);
         fireball.setShooter(null);
+        
+        // Store both the meteor flag and the session ID
         MetadataHelper.setMetadata(fireball, METEOR_METADATA_KEY, true, plugin);
+        PersistentDataHelper.set(fireball.getPersistentDataContainer(), plugin, METEOR_SESSION_KEY, 
+                                PersistentDataType.STRING, currentSessionId.toString());
     }
 
     @EventHandler
@@ -128,40 +173,87 @@ public class MeteorEvent extends BaseEvent implements Listener {
         if (!(event.getEntity() instanceof Fireball)) {
             return;
         }
+        
         Fireball fireball = (Fireball) event.getEntity();
         if (!MetadataHelper.hasMetadata(fireball, METEOR_METADATA_KEY)) {
             return;
         }
 
-        // Remove metadata to prevent processing this fireball again if event somehow re-fires.
+        // Get the session ID from the meteor
+        String sessionIdStr = PersistentDataHelper.get(fireball.getPersistentDataContainer(), 
+                                                     plugin, METEOR_SESSION_KEY, PersistentDataType.STRING);
+        if (sessionIdStr == null) {
+            plugin.getLogger().warning("Meteor hit but had no session ID!");
+            return;
+        }
+
+        UUID sessionId;
+        try {
+            sessionId = UUID.fromString(sessionIdStr);
+        } catch (IllegalArgumentException e) {
+            plugin.getLogger().warning("Invalid session ID on meteor: " + sessionIdStr);
+            return;
+        }
+
+        // Remove metadata
         MetadataHelper.removeMetadata(fireball, METEOR_METADATA_KEY, plugin);
+        PersistentDataHelper.remove(fireball.getPersistentDataContainer(), plugin, METEOR_SESSION_KEY);
 
-        // Check if it hit a block (not an entity)
+        //plugin.getLogger().info("Meteor hit detected for session: " + sessionId);
+
+        // Check if it hit a block
         if (event.getHitBlock() != null) {
-            Location impactLocation = event.getHitBlock().getLocation().add(0.5, 1, 0.5); // Center on top of block
+            Location impactLocation = event.getHitBlock().getLocation().add(0.5, 1, 0.5);
+            //plugin.getLogger().info("Meteor hit block at " + impactLocation);
 
+            // Find nearest player to target
+            Player nearestPlayer = null;
+            double nearestDistance = Double.MAX_VALUE;
+            for (Player player : impactLocation.getWorld().getPlayers()) {
+                double distance = player.getLocation().distance(impactLocation);
+                if (distance < nearestDistance) {
+                    nearestDistance = distance;
+                    nearestPlayer = player;
+                }
+            }
+
+            // Handle loot drops
             double lootChance = plugin.getConfigManager().getConfigValue(getName(), "lootChance");
-            // Ensure lootChance is between 0 and 1
             lootChance = Math.max(0.0, Math.min(1.0, lootChance));
             
+            // plugin.getLogger().info("Rolling for loot with chance: " + lootChance);
             if (random.nextDouble() < lootChance) {
-                int numberOfItemStacks = random.nextInt(2) + 1; // 1 or 2 different item types
-                int numberOfItemStacks1 = random.nextInt(2) + 1; // 1 or 2 different item types
                 List<ItemStack> rewards = rewardGenerator.generateRewards(
                     new TierQuantity()
-                        .add(Tier.COMMON, numberOfItemStacks)
-                        .add(Tier.BASIC, numberOfItemStacks1)
+                        .add(Tier.COMMON, random.nextInt(2) + 1)
+                        .add(Tier.BASIC, random.nextInt(2) + 1)
                         .build()
                 );
                 
                 if (!rewards.isEmpty()) {
+                    //plugin.getLogger().info("Dropping " + rewards.size() + " reward items");
                     for (ItemStack itemStack : rewards) {
-                        fireball.getWorld().dropItemNaturally(impactLocation, itemStack);
+                        impactLocation.getWorld().dropItemNaturally(impactLocation, itemStack);
                     }
                     impactLocation.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, impactLocation, 20, 0.5, 0.5, 0.5, 0.1);
                     SoundHelper.playWorldSoundSafely(impactLocation.getWorld(), "entity.player.levelup", impactLocation, 1.0f, 1.5f);
+                    
+                    // Only attempt to spawn mobs when loot drops
+                    if (nearestPlayer != null) {
+                        spawnMeteorMob(impactLocation, nearestPlayer, sessionId);
+                    }
                 }
             }
+        }
+    }
+
+    @EventHandler
+    public void onSlimeSplit(SlimeSplitEvent event) {
+        // Check if it's one of our tracked magma cubes
+        if (event.getEntity() instanceof MagmaCube && 
+            PersistentDataHelper.has(event.getEntity().getPersistentDataContainer(), plugin, ENTITY_KEY, PersistentDataType.BYTE)) {
+            // Prevent splitting
+            event.setCancelled(true);
         }
     }
 }

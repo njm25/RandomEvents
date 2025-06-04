@@ -1,8 +1,9 @@
 package nc.randomEvents.services;
 
 import nc.randomEvents.RandomEvents;
-import nc.randomEvents.utils.PersistentDataHelper;
+import nc.randomEvents.core.EventSession;
 import nc.randomEvents.core.SessionParticipant;
+import nc.randomEvents.utils.PersistentDataHelper;
 import org.bukkit.*;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -69,8 +70,9 @@ public class EntityManager implements Listener, SessionParticipant {
     @Override
     public void onSessionEnd(UUID sessionId) {
         plugin.getLogger().info("EntityManager cleaning up session: " + sessionId);
-        // Only clean up entities if the event wants them cleaned up
-        if (sessionRegistry.getSession(sessionId).getEvent().clearEntitiesAtEnd()) {
+        EventSession session = sessionRegistry.getSession(sessionId);
+        // Only clean up entities if the session exists and the event wants them cleaned up
+        if (session != null && session.getEvent().clearEntitiesAtEnd()) {
             cleanupSession(sessionId);
         }
     }

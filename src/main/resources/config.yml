@@ -3,6 +3,7 @@ events:
     radius: 40
     amountPerPlayer: 5
     lootChance: 0.4
+    enemySpawnChance: 0.5
   ZombieHoardEvent:
     waves: 2
     zombiesPerWave: 10
