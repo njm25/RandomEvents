@@ -1,7 +1,6 @@
 package nc.randomEvents.services;
 
 import nc.randomEvents.RandomEvents;
-import nc.randomEvents.core.BaseEvent;
 import nc.randomEvents.core.EventSession;
 import nc.randomEvents.core.SessionParticipant;
 import nc.randomEvents.utils.ItemHelper;
