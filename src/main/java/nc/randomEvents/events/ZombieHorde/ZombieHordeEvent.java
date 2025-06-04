@@ -1,4 +1,4 @@
-package nc.randomEvents.events.ZombieHoard;
+package nc.randomEvents.events.ZombieHorde;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.core.BaseEvent;
@@ -25,7 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
 import java.util.HashMap;
 
-public class ZombieHoardEvent extends BaseEvent {
+public class ZombieHordeEvent extends BaseEvent {
     private final RandomEvents plugin;
     private final RewardGenerator rewardGenerator;
     private final EntityManager entityManager;
@@ -35,7 +35,7 @@ public class ZombieHoardEvent extends BaseEvent {
     private final int SPAWN_MIN_DISTANCE = 15;
     private final int SPAWN_MAX_DISTANCE = 25;
 
-    public ZombieHoardEvent(RandomEvents plugin) {
+    public ZombieHordeEvent(RandomEvents plugin) {
         this.plugin = plugin;
         this.rewardGenerator = plugin.getRewardGenerator();
         this.entityManager = plugin.getEntityManager();
@@ -50,7 +50,7 @@ public class ZombieHoardEvent extends BaseEvent {
 
     @Override
     public String getName() {
-        return "ZombieHoardEvent";
+        return "ZombieHordeEvent";
     }
 
     @Override
@@ -100,7 +100,7 @@ public class ZombieHoardEvent extends BaseEvent {
                         // All waves cleared
                         activeZombies.remove(player.getUniqueId());
                         playerWaves.remove(player.getUniqueId());
-                        player.sendMessage("You survived the zombie hoard!");
+                        player.sendMessage("You survived the zombie horde!");
                     }
                 }
             }
