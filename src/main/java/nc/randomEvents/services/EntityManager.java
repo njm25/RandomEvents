@@ -69,7 +69,10 @@ public class EntityManager implements Listener, SessionParticipant {
     @Override
     public void onSessionEnd(UUID sessionId) {
         plugin.getLogger().info("EntityManager cleaning up session: " + sessionId);
-        cleanupSession(sessionId);
+        // Only clean up entities if the event wants them cleaned up
+        if (sessionRegistry.getSession(sessionId).getEvent().clearEntitiesAtEnd()) {
+            cleanupSession(sessionId);
+        }
     }
 
     /**

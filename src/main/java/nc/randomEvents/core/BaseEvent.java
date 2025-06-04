@@ -10,6 +10,8 @@ public abstract class BaseEvent {
     private boolean stripsInventory = false; // Default no inventory stripping
     private boolean canBreakBlocks = true; // Default can break blocks
     private boolean canPlaceBlocks = true; // Default can place blocks
+    private boolean clearEntitiesAtEnd = true; // Default clear entities at end
+    private boolean clearEquipmentAtEnd = true; // Default clear equipment at end
     
     /**
      * Called when the event session starts
@@ -110,4 +112,32 @@ public abstract class BaseEvent {
      * @return A description of what this event does
      */
     public abstract String getDescription();
+
+    /**
+     * @return Whether the event clears its entities when ending
+     */
+    public boolean clearEntitiesAtEnd() {
+        return clearEntitiesAtEnd;
+    }
+
+    /**
+     * @param clearEntitiesAtEnd Whether the event should clear its entities when ending
+     */
+    protected void setClearEntitiesAtEnd(boolean clearEntitiesAtEnd) {
+        this.clearEntitiesAtEnd = clearEntitiesAtEnd;
+    }
+
+    /**
+     * @return Whether the event clears its equipment when ending
+     */
+    public boolean clearEquipmentAtEnd() {
+        return clearEquipmentAtEnd;
+    }
+
+    /**
+     * @param clearEquipmentAtEnd Whether the event should clear its equipment when ending
+     */
+    protected void setClearEquipmentAtEnd(boolean clearEquipmentAtEnd) {
+        this.clearEquipmentAtEnd = clearEquipmentAtEnd;
+    }
 }

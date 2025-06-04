@@ -1,9 +1,10 @@
 package nc.randomEvents.services;
 
 import nc.randomEvents.RandomEvents;
+import nc.randomEvents.core.BaseEvent;
+import nc.randomEvents.core.SessionParticipant;
 import nc.randomEvents.utils.ItemHelper;
 import nc.randomEvents.utils.PersistentDataHelper;
-import nc.randomEvents.core.SessionParticipant;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
@@ -193,6 +194,7 @@ public class EquipmentManager implements Listener, SessionParticipant {
         plugin.getLogger().info("EquipmentManager cleaning up session: " + sessionId);
 
         boolean hasStripsInventory = this.strippedInventories.containsKey(sessionId);
+        BaseEvent event = sessionRegistry.getSession(sessionId).getEvent();
         
         if (hasStripsInventory) {
             Map<UUID, StoredInventory> sessionInventories = strippedInventories.get(sessionId);
@@ -201,8 +203,10 @@ public class EquipmentManager implements Listener, SessionParticipant {
                 for (Map.Entry<UUID, StoredInventory> entry : sessionInventories.entrySet()) {
                     Player player = plugin.getServer().getPlayer(entry.getKey());
                     if (player != null && player.isOnline()) {
-                        // Clear any event items first
-                        cleanupPlayerInventory(player, sessionId);
+                        // Clear any event items first if we should
+                        if (event.clearEquipmentAtEnd()) {
+                            cleanupPlayerInventory(player, sessionId);
+                        }
                         
                         // Restore the original inventory
                         entry.getValue().restore(player);
@@ -215,8 +219,10 @@ public class EquipmentManager implements Listener, SessionParticipant {
             }
         }
         
-        // Cleanup any remaining event items
-        cleanupSession(sessionId);
+        // Cleanup any remaining event items if we should
+        if (event.clearEquipmentAtEnd()) {
+            cleanupSession(sessionId);
+        }
     }
 
     /**
