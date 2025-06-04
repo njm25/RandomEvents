@@ -9,6 +9,7 @@ import nc.randomEvents.utils.LocationHelper;
 import nc.randomEvents.utils.MetadataHelper;
 import nc.randomEvents.utils.SoundHelper;
 import nc.randomEvents.services.EntityManager;
+import nc.randomEvents.services.ProjectileManager;
 import nc.randomEvents.utils.PersistentDataHelper;
 
 import org.bukkit.Location;
@@ -25,12 +26,14 @@ import org.bukkit.persistence.PersistentDataType;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
 
 public class MeteorEvent extends BaseEvent implements Listener {
     private final RandomEvents plugin;
     private final RewardGenerator rewardGenerator;
+    private final ProjectileManager projectileManager;
     private final Random random = new Random();
     private static final String METEOR_METADATA_KEY = "meteor_event_fireball";
     private static final String METEOR_SESSION_KEY = "meteor_session";
@@ -42,14 +45,11 @@ public class MeteorEvent extends BaseEvent implements Listener {
     public MeteorEvent(RandomEvents plugin) {
         this.plugin = plugin;
         this.rewardGenerator = plugin.getRewardGenerator();
-        
-        // Configure base event settings
-        setCanBreakBlocks(false);
-        setCanPlaceBlocks(false);
-        setStripsInventory(false);
+        this.projectileManager = plugin.getProjectileManager();
         setTickInterval(10L);
         setDuration(200L);
         setClearEntitiesAtEnd(false);
+        setClearProjectilesAtEnd(true);
         
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
@@ -61,7 +61,7 @@ public class MeteorEvent extends BaseEvent implements Listener {
 
     @Override
     public String getDescription() {
-        return "Rains fireballs from the sky that may drop rewards upon impact!";
+        return "Rains fireballs from the sky that may drop rewards and/or enemies upon impact!";
     }
 
     @Override
@@ -122,14 +122,44 @@ public class MeteorEvent extends BaseEvent implements Listener {
             entity = entityManager.spawnTracked(EntityType.BLAZE, location, "meteor_blaze", sessionId);
             
             if (entity instanceof Blaze) {
-                //entity.setAI(false);
-                //entity.setGravity(false);
+                Blaze blaze = (Blaze) entity;
                 if (target != null) {
                     ((Monster) entity).setTarget(target);
                 }
+                
+                // Start the turret shooting task
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        if (!blaze.isValid() || blaze.isDead()) {
+                            this.cancel();
+                            return;
+                        }
+                        
+                        // Only shoot if we have a target and they're within range
+                        LivingEntity target = blaze.getTarget();
+                        if (target != null && target.getLocation().distance(blaze.getLocation()) <= 25) { // Increased range to 25 blocks
+                            Location blazeLoc = blaze.getLocation().add(0, 0.5, 0);
+                            Vector direction = target.getLocation().add(0, 0.5, 0).subtract(blazeLoc).toVector().normalize();
+                            
+                            // Spawn tracked fireball with half damage
+                            projectileManager.spawnTracked(
+                                SmallFireball.class,
+                                blazeLoc,
+                                direction,
+                                blaze,
+                                sessionId,
+                                2.5, // Half of normal Blaze fireball damage (5)
+                                1.5  // Speed multiplier
+                            );
+                            
+                            // Play Blaze shoot sound
+                            blaze.getWorld().playSound(blazeLoc, "entity.blaze.shoot", 1.0f, 1.0f);
+                        }
+                    }
+                }.runTaskTimer(plugin, 20L, 20L); // Shoot every second (20 ticks)
             }
-        }    // If Blaze didn't spawn, try Magma Cube
-        else if (random.nextDouble() < enemySpawnChance) {
+        } else if (random.nextDouble() < enemySpawnChance) {
             entity = entityManager.spawnTracked(EntityType.MAGMA_CUBE, location, "meteor_magma", sessionId);
             if (entity instanceof MagmaCube) {
                 //((MagmaCube) entity).setSize(2);

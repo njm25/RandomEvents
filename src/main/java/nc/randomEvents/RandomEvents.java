@@ -1,7 +1,6 @@
 package nc.randomEvents;
 
 import org.bukkit.plugin.java.JavaPlugin;
-
 import nc.randomEvents.commands.CommandManager;
 import nc.randomEvents.services.*;
 import nc.randomEvents.utils.Metrics;
@@ -21,6 +20,7 @@ public final class RandomEvents extends JavaPlugin {
     private StartManager startManager;
     private BlockManager blockManager;
     private EntityManager entityManager;
+    private ProjectileManager projectileManager;
 
     @Override
     public void onEnable() {
@@ -95,6 +95,10 @@ public final class RandomEvents extends JavaPlugin {
         this.entityManager = entityManager;
     }
 
+    public void setProjectileManager(ProjectileManager projectileManager) {
+        this.projectileManager = projectileManager;
+    }
+
     // #endregion Setters
 
     // #region Getters
@@ -145,6 +149,10 @@ public final class RandomEvents extends JavaPlugin {
 
     public EntityManager getEntityManager() {
         return entityManager;
+    }
+
+    public ProjectileManager getProjectileManager() {
+        return projectileManager;
     }
 
     // #endregion Getters

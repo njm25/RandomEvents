@@ -1,0 +1,122 @@
+package nc.randomEvents.services;
+
+import nc.randomEvents.RandomEvents;
+import nc.randomEvents.core.EventSession;
+import nc.randomEvents.core.SessionParticipant;
+import nc.randomEvents.utils.PersistentDataHelper;
+import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.entity.*;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.projectiles.ProjectileSource;
+import org.bukkit.util.Vector;
+
+import java.util.*;
+
+public class ProjectileManager implements Listener, SessionParticipant {
+    private final RandomEvents plugin;
+    private final SessionRegistry sessionRegistry;
+    private static final String PROJECTILE_KEY = "event_projectile";
+    private static final String PROJECTILE_DAMAGE_KEY = "projectile_damage";
+    private static final String PROJECTILE_SESSION_KEY = "projectile_session";
+    private final Map<UUID, Set<UUID>> sessionProjectiles = new HashMap<>();
+
+    public ProjectileManager(RandomEvents plugin) {
+        this.plugin = plugin;
+        this.sessionRegistry = plugin.getSessionRegistry();
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+        plugin.getSessionRegistry().registerParticipant(this);
+        plugin.getLogger().info("ProjectileManager initialized");
+    }
+
+    /**
+     * Spawns and tracks a projectile for an event
+     * @param type The type of projectile to spawn
+     * @param location The location to spawn at
+     * @param direction The direction vector
+     * @param shooter The entity shooting the projectile
+     * @param sessionId The event session this projectile belongs to
+     * @param damage The custom damage amount (if null, uses default damage)
+     * @param speed The projectile speed multiplier
+     * @return The spawned projectile
+     */
+    public <T extends Projectile> T spawnTracked(Class<T> type, Location location, Vector direction, 
+                                               ProjectileSource shooter, UUID sessionId, Double damage, double speed) {
+        T projectile = location.getWorld().spawn(location, type);
+        if (projectile != null) {
+            projectile.setShooter(shooter);
+            projectile.setVelocity(direction.multiply(speed));
+
+            // Add persistent data
+            PersistentDataHelper.set(projectile.getPersistentDataContainer(), plugin, PROJECTILE_KEY, 
+                                   PersistentDataType.BYTE, (byte) 1);
+            PersistentDataHelper.set(projectile.getPersistentDataContainer(), plugin, PROJECTILE_SESSION_KEY, 
+                                   PersistentDataType.STRING, sessionId.toString());
+            
+            // Set custom damage if specified
+            if (damage != null) {
+                PersistentDataHelper.set(projectile.getPersistentDataContainer(), plugin, PROJECTILE_DAMAGE_KEY, 
+                                       PersistentDataType.DOUBLE, damage);
+            }
+
+            // Track the projectile
+            sessionProjectiles.computeIfAbsent(sessionId, k -> new HashSet<>()).add(projectile.getUniqueId());
+        }
+        return projectile;
+    }
+
+    @Override
+    public void onSessionStart(UUID sessionId) {
+        plugin.getLogger().info("ProjectileManager tracking new session: " + sessionId);
+        sessionProjectiles.put(sessionId, new HashSet<>());
+    }
+
+    @Override
+    public void onSessionEnd(UUID sessionId) {
+        plugin.getLogger().info("ProjectileManager cleaning up session: " + sessionId);
+        EventSession session = sessionRegistry.getSession(sessionId);
+        // Only clean up projectiles if the session exists and the event wants them cleaned up
+        if (session != null && session.getEvent().clearProjectilesAtEnd()) {
+            cleanupSession(sessionId);
+        }
+    }
+
+    private void cleanupSession(UUID sessionId) {
+        Set<UUID> projectiles = sessionProjectiles.remove(sessionId);
+        if (projectiles != null) {
+            for (World world : plugin.getServer().getWorlds()) {
+                for (Entity entity : world.getEntities()) {
+                    if (projectiles.contains(entity.getUniqueId()) || isSessionProjectile(entity, sessionId)) {
+                        entity.remove();
+                    }
+                }
+            }
+        }
+    }
+
+    private boolean isSessionProjectile(Entity entity, UUID sessionId) {
+        String storedSessionId = PersistentDataHelper.get(entity.getPersistentDataContainer(), plugin, 
+                                                        PROJECTILE_SESSION_KEY, PersistentDataType.STRING);
+        return storedSessionId != null && storedSessionId.equals(sessionId.toString());
+    }
+
+    @EventHandler
+    public void onEntityDamage(EntityDamageByEntityEvent event) {
+        Entity damager = event.getDamager();
+        
+        // Check if it's one of our tracked projectiles
+        if (damager instanceof Projectile && 
+            PersistentDataHelper.has(damager.getPersistentDataContainer(), plugin, PROJECTILE_KEY, PersistentDataType.BYTE)) {
+            
+            // Check for custom damage
+            Double customDamage = PersistentDataHelper.get(damager.getPersistentDataContainer(), plugin, 
+                                                         PROJECTILE_DAMAGE_KEY, PersistentDataType.DOUBLE);
+            if (customDamage != null) {
+                event.setDamage(customDamage);
+            }
+        }
+    }
+} 

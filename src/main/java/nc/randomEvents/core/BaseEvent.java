@@ -12,6 +12,7 @@ public abstract class BaseEvent {
     private boolean canPlaceBlocks = true; // Default can place blocks
     private boolean clearEntitiesAtEnd = true; // Default clear entities at end
     private boolean clearEquipmentAtEnd = true; // Default clear equipment at end
+    private boolean clearProjectilesAtEnd = true; // Default clear projectiles at end
     
     /**
      * Called when the event session starts
@@ -139,5 +140,19 @@ public abstract class BaseEvent {
      */
     protected void setClearEquipmentAtEnd(boolean clearEquipmentAtEnd) {
         this.clearEquipmentAtEnd = clearEquipmentAtEnd;
+    }
+
+    /**
+     * @return Whether the event clears its projectiles when ending
+     */
+    public boolean clearProjectilesAtEnd() {
+        return clearProjectilesAtEnd;
+    }
+
+    /**
+     * @param clearProjectilesAtEnd Whether the event should clear its projectiles when ending
+     */
+    public void setClearProjectilesAtEnd(boolean clearProjectilesAtEnd) {
+        this.clearProjectilesAtEnd = clearProjectilesAtEnd;
     }
 }
