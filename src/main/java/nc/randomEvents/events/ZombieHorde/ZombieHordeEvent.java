@@ -5,6 +5,7 @@ import nc.randomEvents.core.BaseEvent;
 import nc.randomEvents.services.RewardGenerator;
 import nc.randomEvents.services.EntityManager;
 import nc.randomEvents.utils.EntityHelper;
+import nc.randomEvents.utils.ItemHelper;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -42,7 +43,7 @@ public class ZombieHordeEvent extends BaseEvent {
         
         // Configure event settings
         setTickInterval(20L); // Check wave status every second
-        setDuration(0); // No fixed duration, ends when waves are complete
+        setDuration(12000L); // No fixed duration, ends when waves are complete
         setStripsInventory(false);
         setCanBreakBlocks(true);
         setCanPlaceBlocks(true);
@@ -265,9 +266,7 @@ public class ZombieHordeEvent extends BaseEvent {
         if (!rewards.isEmpty()) {
             player.sendMessage("Wave " + waveNumber + " cleared! You received some loot!");
             for (ItemStack item : rewards) {
-                player.getInventory().addItem(item).forEach((index, leftoverItem) -> {
-                    player.getWorld().dropItemNaturally(player.getLocation(), leftoverItem);
-                });
+                ItemHelper.giveItemToPlayer(player, item);
             }
         }
     }
