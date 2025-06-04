@@ -11,6 +11,7 @@ import nc.randomEvents.utils.SoundHelper;
 import nc.randomEvents.services.EntityManager;
 import nc.randomEvents.services.ProjectileManager;
 import nc.randomEvents.utils.PersistentDataHelper;
+import nc.randomEvents.utils.EntityHelper;
 
 import org.bukkit.Location;
 import org.bukkit.Particle;
@@ -123,6 +124,8 @@ public class MeteorEvent extends BaseEvent implements Listener {
             
             if (entity instanceof Blaze) {
                 Blaze blaze = (Blaze) entity;
+                //EntityHelper.setMovementSpeed(blaze, 0.0); // Make it completely stationary
+                //blaze.setGravity(false); // Prevent up/down movement
                 if (target != null) {
                     ((Monster) entity).setTarget(target);
                 }
@@ -162,8 +165,44 @@ public class MeteorEvent extends BaseEvent implements Listener {
         } else if (random.nextDouble() < enemySpawnChance) {
             entity = entityManager.spawnTracked(EntityType.MAGMA_CUBE, location, "meteor_magma", sessionId);
             if (entity instanceof MagmaCube) {
-                //((MagmaCube) entity).setSize(2);
-                // No need to set target for Magma Cubes - they'll naturally chase nearby players
+                MagmaCube magma = (MagmaCube) entity;
+                magma.setSize(6);
+                magma.setHealth(12);
+                EntityHelper.setMovementSpeed(magma, 0.23 * 4.0); // 4x normal speed (0.23 is base speed)
+                // Set the target to the nearest player
+                if (target != null) {
+                    magma.setTarget(target);
+                }
+                
+                // Start the jumping attack task
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        if (!magma.isValid() || magma.isDead()) {
+                            this.cancel();
+                            return;
+                        }
+                        
+                        // 50% chance to jump at nearest player
+                        if (random.nextDouble() < 0.5) {
+                            LivingEntity target = magma.getTarget();
+                            if (target != null && target.getLocation().distance(magma.getLocation()) <= 16) {
+                                Location magmaLoc = magma.getLocation();
+                                Vector direction = target.getLocation().add(0, 0.5, 0)
+                                    .subtract(magmaLoc)
+                                    .toVector()
+                                    .normalize()
+                                    .multiply(1.2); // Add some upward momentum for a more arc-like jump
+                                direction.setY(0.5);
+                                
+                                EntityHelper.launchEntity(magma, direction, 1.5);
+                                
+                                // Play jump sound
+                                magma.getWorld().playSound(magmaLoc, "entity.magma_cube.jump", 1.0f, 0.8f);
+                            }
+                        }
+                    }
+                }.runTaskTimer(plugin, 40L, 40L); // Check for jump every 2 seconds
             }
         }
     }
