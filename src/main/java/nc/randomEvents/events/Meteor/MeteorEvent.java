@@ -42,6 +42,7 @@ public class MeteorEvent extends BaseEvent implements Listener {
     private static final int GROUP_RADIUS = 100; // Radius for grouping players
     private final Map<UUID, Set<Set<Player>>> sessionGroups = new HashMap<>();
     private UUID currentSessionId;
+    private int spawnedEnemyCount = 0; // Track total spawned enemies
 
     public MeteorEvent(RandomEvents plugin) {
         this.plugin = plugin;
@@ -68,6 +69,7 @@ public class MeteorEvent extends BaseEvent implements Listener {
     @Override
     public void onStart(UUID sessionId, Set<Player> players) {
         this.currentSessionId = sessionId;
+        this.spawnedEnemyCount = 0; // Reset counter on event start
         Set<Set<Player>> playerGroups = LocationHelper.groupPlayers(players, GROUP_RADIUS);
         sessionGroups.put(sessionId, playerGroups);
 
@@ -113,6 +115,12 @@ public class MeteorEvent extends BaseEvent implements Listener {
             return;
         }
 
+        // Check if we've reached the spawn limit
+        int maxEnemySpawns = plugin.getConfigManager().getConfigValue(getName(), "maxEnemySpawns");
+        if (spawnedEnemyCount >= maxEnemySpawns) {
+            return; // Skip enemy spawn chance roll entirely
+        }
+
         double enemySpawnChance = plugin.getConfigManager().getConfigValue(getName(), "enemySpawnChance");
         enemySpawnChance = Math.max(0.0, Math.min(1.0, enemySpawnChance));
         
@@ -123,6 +131,7 @@ public class MeteorEvent extends BaseEvent implements Listener {
             entity = entityManager.spawnTracked(EntityType.BLAZE, location, "meteor_blaze", sessionId);
             
             if (entity instanceof Blaze) {
+                spawnedEnemyCount++; // Increment counter on successful spawn
                 Blaze blaze = (Blaze) entity;
                 //EntityHelper.setMovementSpeed(blaze, 0.0); // Make it completely stationary
                 //blaze.setGravity(false); // Prevent up/down movement
@@ -165,6 +174,7 @@ public class MeteorEvent extends BaseEvent implements Listener {
         } else if (random.nextDouble() < enemySpawnChance) {
             entity = entityManager.spawnTracked(EntityType.MAGMA_CUBE, location, "meteor_magma", sessionId);
             if (entity instanceof MagmaCube) {
+                spawnedEnemyCount++; // Increment counter on successful spawn
                 MagmaCube magma = (MagmaCube) entity;
                 magma.setSize(6);
                 magma.setHealth(12);

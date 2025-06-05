@@ -4,6 +4,7 @@ events:
     amountPerPlayer: 5
     lootChance: 0.4
     enemySpawnChance: 0.5
+    maxEnemySpawns: 6
   ZombieHoardEvent:
     waves: 2
     zombiesPerWave: 10
