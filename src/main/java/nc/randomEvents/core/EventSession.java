@@ -35,6 +35,9 @@ public class EventSession {
         if (isEnded) {
             throw new IllegalStateException("Cannot start an ended session");
         }
+        if (event.getMaxPlayers() > 0 && getPlayers().size() > event.getMaxPlayers()) {
+            throw new IllegalStateException("Cannot start an event with more players than the max players");
+        }
         
         // Start the event
         plugin.getSessionRegistry().registerSession(this);
