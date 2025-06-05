@@ -58,7 +58,7 @@ public class LootGoblinEvent extends BaseEvent implements Listener {
     public void onStart(UUID sessionId, Set<Player> players) {
         for (Player player : players) {
             if (!player.isOnline() || player.isDead()) continue;
-            spawnGoblinForPlayer(player);
+            spawnGoblinForPlayer(player, sessionId);
         }
     }
 
@@ -83,7 +83,7 @@ public class LootGoblinEvent extends BaseEvent implements Listener {
         return "A mischievous Loot Goblin appears! Catch it if you can!";
     }
 
-    private void spawnGoblinForPlayer(Player player) {
+    private void spawnGoblinForPlayer(Player player, UUID sessionId) {
         Location playerLoc = player.getLocation();
         World world = player.getWorld();
         Location spawnLoc = null;
@@ -153,7 +153,7 @@ public class LootGoblinEvent extends BaseEvent implements Listener {
             .append(Component.text(" has appeared nearby!", NamedTextColor.YELLOW)));
         SoundHelper.playWorldSoundSafely(world, "entity.piglin.jealous", goblin.getLocation(), 1.0f, 1.5f);
 
-        GoblinTask task = new GoblinTask(goblin, player);
+        GoblinTask task = new GoblinTask(goblin, player, sessionId);
         activeGoblins.put(goblin.getUniqueId(), task);
         task.runTaskTimer(plugin, 0L, 5L); // Run AI tick every 5 ticks (0.25s)
     }
@@ -294,12 +294,16 @@ public class LootGoblinEvent extends BaseEvent implements Listener {
                 }
                 goblinEntity.remove();
             }
+            // Since we have maxPlayers=1, each player has their own session
+            // End the session when their goblin is cleaned up
+            plugin.getSessionRegistry().getSession(task.sessionId).end();
         }
     }
 
     private class GoblinTask extends BukkitRunnable {
         final PigZombie goblin;
         final Player initialPlayerTarget;
+        final UUID sessionId;
         Block targetChest = null;
         boolean hasReachedChest = false;
         boolean isFleeing = false;
@@ -308,9 +312,10 @@ public class LootGoblinEvent extends BaseEvent implements Listener {
         int fleeAttempts = 0;
         private Location fleeDestination = null;
 
-        GoblinTask(PigZombie goblin, Player player) {
+        GoblinTask(PigZombie goblin, Player player, UUID sessionId) {
             this.goblin = goblin;
             this.initialPlayerTarget = player;
+            this.sessionId = sessionId;
         }
 
         @Override
