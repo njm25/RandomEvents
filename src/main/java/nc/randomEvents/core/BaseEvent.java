@@ -7,6 +7,7 @@ import java.util.UUID;
 public abstract class BaseEvent {
     private long tickInterval = 20L; // Default 1 second
     private long duration = 0; // Default no duration
+    private long maxPlayers = 0; // Default no max players
     private boolean stripsInventory = false; // Default no inventory stripping
     private boolean canBreakBlocks = true; // Default can break blocks
     private boolean canPlaceBlocks = true; // Default can place blocks
@@ -78,6 +79,20 @@ public abstract class BaseEvent {
      */
     protected void setDuration(long duration) {
         this.duration = duration;
+    }
+
+    /**
+     * @return The maximum number of players that can participate in the event
+     */
+    public long getMaxPlayers() {
+        return maxPlayers;
+    }
+    
+    /**
+     * @param maxPlayers The maximum number of players that can participate in the event
+     */
+    protected void setMaxPlayers(long maxPlayers) {
+        this.maxPlayers = maxPlayers;
     }
 
     /**
