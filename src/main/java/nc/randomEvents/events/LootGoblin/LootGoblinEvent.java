@@ -51,6 +51,7 @@ public class LootGoblinEvent extends BaseEvent implements Listener {
         setStripsInventory(false);
         setCanBreakBlocks(true);
         setCanPlaceBlocks(true);
+        setMaxPlayers(1);
     }
 
     @Override
