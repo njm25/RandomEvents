@@ -75,6 +75,8 @@ public class ZombieHordeEvent extends BaseEvent {
     @Override
     public void onTick(UUID sessionId, Set<Player> players) {
         // Check wave status for each player
+        boolean allPlayersFinished = true;  // Track if all players have finished their waves
+        
         for (Player player : players) {
             if (!player.isOnline() || player.isDead()) {
                 cleanupPlayerZombies(player.getUniqueId());
@@ -97,14 +99,22 @@ public class ZombieHordeEvent extends BaseEvent {
                         int nextWave = currentWave + 1;
                         playerWaves.put(player.getUniqueId(), nextWave);
                         startWave(player, nextWave);
+                        allPlayersFinished = false;  // This player still has waves to complete
                     } else {
-                        // All waves cleared
+                        // All waves cleared for this player
                         activeZombies.remove(player.getUniqueId());
                         playerWaves.remove(player.getUniqueId());
                         player.sendMessage("You survived the zombie horde!");
                     }
+                } else {
+                    allPlayersFinished = false;  // This player still has active zombies
                 }
             }
+        }
+
+        // If all players have finished their waves or disconnected, end the session
+        if (allPlayersFinished && (playerWaves.isEmpty() || players.isEmpty())) {
+            plugin.getSessionRegistry().endSession(sessionId);
         }
     }
 
