@@ -69,8 +69,7 @@ public class LootGoblinEvent extends BaseEvent implements Listener {
 
     @Override
     public void onEnd(UUID sessionId, Set<Player> players) {
-        // Clean up any remaining goblins
-        new ArrayList<>(activeGoblins.keySet()).forEach(goblinId -> cleanupGoblin(goblinId, true));
+
     }
 
     @Override
@@ -296,7 +295,7 @@ public class LootGoblinEvent extends BaseEvent implements Listener {
             }
             // Since we have maxPlayers=1, each player has their own session
             // End the session when their goblin is cleaned up
-            plugin.getSessionRegistry().getSession(task.sessionId).end();
+            plugin.getSessionRegistry().endSession(task.sessionId);
         }
     }
 
