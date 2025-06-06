@@ -5,7 +5,7 @@ events:
     lootChance: 0.4
     enemySpawnChance: 0.5
     maxEnemySpawns: 6
-  ZombieHoardEvent:
+  ZombieHordeEvent:
     waves: 2
     zombiesPerWave: 10
   Sheepocalypse:
