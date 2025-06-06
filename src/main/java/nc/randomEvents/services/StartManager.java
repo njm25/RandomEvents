@@ -25,6 +25,7 @@ public class StartManager {
         plugin.setBlockManager(new BlockManager(plugin));
         plugin.setTestManager(new TestManager(plugin));
         plugin.setEntityManager(new EntityManager(plugin));
+        plugin.setProjectileManager(new ProjectileManager(plugin));
 
         // Third layer: Event system that coordinates everything
         plugin.setEventManager(new EventManager(plugin));

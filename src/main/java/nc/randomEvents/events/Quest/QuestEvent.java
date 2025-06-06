@@ -1,7 +1,7 @@
 package nc.randomEvents.events.Quest;
 
 import nc.randomEvents.RandomEvents;
-import nc.randomEvents.events.Event;
+import nc.randomEvents.core.BaseEvent;
 import nc.randomEvents.services.RewardGenerator;
 import nc.randomEvents.services.RewardGenerator.Tier;
 import nc.randomEvents.services.RewardGenerator.TierQuantity;
@@ -27,7 +27,7 @@ import org.bukkit.util.Vector;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class QuestEvent implements Event, Listener {
+public class QuestEvent extends BaseEvent implements Listener {
 
     private static final int GROUP_RADIUS = 1500; // Radius for grouping players
     private static final int SINGLE_PLAYER_DISTANCE = 800; // Distance for single player
@@ -45,7 +45,6 @@ public class QuestEvent implements Event, Listener {
         this.random = new Random();
     }
 
-    @Override
     public void execute(Set<Player> players) {
         if (players == null || players.isEmpty()) {
             plugin.getLogger().warning("QuestEvent cannot start: No players provided.");
@@ -411,7 +410,7 @@ public class QuestEvent implements Event, Listener {
             plugin.getLogger().info("QuestEvent finished and all resources cleaned up.");
         }
     }
-
+    
     @Override
     public String getName() {
         return "QuestEvent";
@@ -420,5 +419,17 @@ public class QuestEvent implements Event, Listener {
     @Override
     public String getDescription() {
         return "Players must seek a chest placed randomly in the world via coordinates in a book. First to interact wins rare loot.";
+    }
+
+    @Override
+    public void onStart(UUID sessionId, Set<Player> players) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'onStart'");
+    }
+
+    @Override
+    public void onEnd(UUID sessionId, Set<Player> players) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'onEnd'");
     }
 }
