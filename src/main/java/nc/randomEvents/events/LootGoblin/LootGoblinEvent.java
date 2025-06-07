@@ -2,9 +2,9 @@ package nc.randomEvents.events.LootGoblin;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.core.BaseEvent;
+import nc.randomEvents.services.participants.EntityManager;
 import nc.randomEvents.utils.SoundHelper;
 import nc.randomEvents.utils.EntityHelper;
-import nc.randomEvents.services.EntityManager;
 import nc.randomEvents.utils.PersistentDataHelper;
 
 import org.bukkit.*;

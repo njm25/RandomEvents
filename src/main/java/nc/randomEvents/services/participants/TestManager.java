@@ -1,4 +1,4 @@
-package nc.randomEvents.services;
+package nc.randomEvents.services.participants;
 
 import java.util.UUID;
 

@@ -3,7 +3,7 @@ package nc.randomEvents.events.Sheepocalypse;
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.core.BaseEvent;
 import nc.randomEvents.services.RewardGenerator;
-import nc.randomEvents.services.EntityManager;
+import nc.randomEvents.services.participants.EntityManager;
 import nc.randomEvents.utils.LocationHelper;
 import nc.randomEvents.utils.SoundHelper;
 

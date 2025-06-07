@@ -3,6 +3,11 @@ package nc.randomEvents;
 import org.bukkit.plugin.java.JavaPlugin;
 import nc.randomEvents.commands.CommandManager;
 import nc.randomEvents.services.*;
+import nc.randomEvents.services.participants.BlockManager;
+import nc.randomEvents.services.participants.EntityManager;
+import nc.randomEvents.services.participants.EquipmentManager;
+import nc.randomEvents.services.participants.ProjectileManager;
+import nc.randomEvents.services.participants.TestManager;
 import nc.randomEvents.utils.Metrics;
 
 public final class RandomEvents extends JavaPlugin {
@@ -47,55 +52,55 @@ public final class RandomEvents extends JavaPlugin {
     
     // #region Setters
 
-    public void setCommandManager(CommandManager commandManager) {
+    void setCommandManager(CommandManager commandManager) {
         this.commandManager = commandManager;
     }
 
-    public void setMetrics(Metrics metrics) {
+    void setMetrics(Metrics metrics) {
         this.metrics = metrics;
     }
 
-    public void setEventManager(EventManager eventManager) {
+    void setEventManager(EventManager eventManager) {
         this.eventManager = eventManager;
     }
 
-    public void setDataManager(DataManager dataManager) {
+    void setDataManager(DataManager dataManager) {
         this.dataManager = dataManager;
     }
     
-    public void setConfigManager(ConfigManager configManager) {
+    void setConfigManager(ConfigManager configManager) {
         this.configManager = configManager;
     }
 
-    public void setSessionRegistry(SessionRegistry sessionRegistry) {
+    void setSessionRegistry(SessionRegistry sessionRegistry) {
         this.sessionRegistry = sessionRegistry;
     }
 
-    public void setRewardGenerator(RewardGenerator rewardGenerator) {    
+    void setRewardGenerator(RewardGenerator rewardGenerator) {    
         this.rewardGenerator = rewardGenerator;
     }
 
-    public void setEquipmentManager(EquipmentManager equipmentManager) {
+    void setEquipmentManager(EquipmentManager equipmentManager) {
         this.equipmentManager = equipmentManager;
     }
 
-    public void setTestManager(TestManager testManager) {
+    void setTestManager(TestManager testManager) {
         this.testManager = testManager;
     }
 
-    public void setDisableManager(DisableManager disableManager) {
+    void setDisableManager(DisableManager disableManager) {
         this.disableManager = disableManager;
     }
 
-    public void setBlockManager(BlockManager blockManager) {
+    void setBlockManager(BlockManager blockManager) {
         this.blockManager = blockManager;
     }
 
-    public void setEntityManager(EntityManager entityManager) {
+    void setEntityManager(EntityManager entityManager) {
         this.entityManager = entityManager;
     }
 
-    public void setProjectileManager(ProjectileManager projectileManager) {
+    void setProjectileManager(ProjectileManager projectileManager) {
         this.projectileManager = projectileManager;
     }
 

@@ -5,11 +5,11 @@ import nc.randomEvents.core.BaseEvent;
 import nc.randomEvents.services.RewardGenerator;
 import nc.randomEvents.services.RewardGenerator.Tier;
 import nc.randomEvents.services.RewardGenerator.TierQuantity;
+import nc.randomEvents.services.participants.EntityManager;
+import nc.randomEvents.services.participants.ProjectileManager;
 import nc.randomEvents.utils.LocationHelper;
 import nc.randomEvents.utils.MetadataHelper;
 import nc.randomEvents.utils.SoundHelper;
-import nc.randomEvents.services.EntityManager;
-import nc.randomEvents.services.ProjectileManager;
 import nc.randomEvents.utils.PersistentDataHelper;
 import nc.randomEvents.utils.EntityHelper;
 

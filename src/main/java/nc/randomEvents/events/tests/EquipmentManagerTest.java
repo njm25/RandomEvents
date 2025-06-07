@@ -1,8 +1,8 @@
-package nc.randomEvents.events.Test;
+package nc.randomEvents.events.tests;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.core.BaseEvent;
-import nc.randomEvents.services.EquipmentManager;
+import nc.randomEvents.services.participants.EquipmentManager;
 
 import org.bukkit.Material;
 import org.bukkit.entity.Player;

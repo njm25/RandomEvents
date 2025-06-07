@@ -1,8 +1,9 @@
-package nc.randomEvents.services;
+package nc.randomEvents.services.participants;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.core.EventSession;
 import nc.randomEvents.core.SessionParticipant;
+import nc.randomEvents.services.SessionRegistry;
 import nc.randomEvents.utils.PersistentDataHelper;
 import org.bukkit.*;
 import org.bukkit.entity.*;
