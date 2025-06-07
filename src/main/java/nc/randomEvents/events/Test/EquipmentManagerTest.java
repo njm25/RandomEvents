@@ -1,4 +1,4 @@
-package nc.randomEvents.events.Test.EquipmentManagerTest;
+package nc.randomEvents.events.Test;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.core.BaseEvent;
