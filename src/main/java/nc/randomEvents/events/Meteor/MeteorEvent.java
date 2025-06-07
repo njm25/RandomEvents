@@ -2,6 +2,7 @@ package nc.randomEvents.events.Meteor;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.core.BaseEvent;
+import nc.randomEvents.services.SessionRegistry;
 import nc.randomEvents.services.RewardGenerator;
 import nc.randomEvents.services.RewardGenerator.Tier;
 import nc.randomEvents.services.RewardGenerator.TierQuantity;
@@ -35,12 +36,15 @@ public class MeteorEvent extends BaseEvent implements Listener {
     private final RandomEvents plugin;
     private final RewardGenerator rewardGenerator;
     private final ProjectileManager projectileManager;
+    private final SessionRegistry sessionRegistry;
     private final Random random = new Random();
     private static final String METEOR_METADATA_KEY = "meteor_event_fireball";
     private static final String METEOR_SESSION_KEY = "meteor_session";
     private static final String ENTITY_KEY = "entity";
     private static final int GROUP_RADIUS = 100; // Radius for grouping players
     private final Map<UUID, Set<Set<Player>>> sessionGroups = new HashMap<>();
+    private final Map<UUID, Integer> totalMeteorsSpawned = new HashMap<>();
+    private final Map<UUID, Integer> meteorsHit = new HashMap<>();
     private UUID currentSessionId;
     private int spawnedEnemyCount = 0; // Track total spawned enemies
 
@@ -48,8 +52,9 @@ public class MeteorEvent extends BaseEvent implements Listener {
         this.plugin = plugin;
         this.rewardGenerator = plugin.getRewardGenerator();
         this.projectileManager = plugin.getProjectileManager();
+        this.sessionRegistry = plugin.getSessionRegistry();
         setTickInterval(10L);
-        setDuration(200L);
+        setDuration(0);
         setClearEntitiesAtEnd(false);
         setClearProjectilesAtEnd(true);
         
@@ -72,6 +77,8 @@ public class MeteorEvent extends BaseEvent implements Listener {
         this.spawnedEnemyCount = 0; // Reset counter on event start
         Set<Set<Player>> playerGroups = LocationHelper.groupPlayers(players, GROUP_RADIUS);
         sessionGroups.put(sessionId, playerGroups);
+        totalMeteorsSpawned.put(sessionId, 0);
+        meteorsHit.put(sessionId, 0);
 
         for (Set<Player> group : playerGroups) {
             for (Player player : group) {
@@ -86,16 +93,31 @@ public class MeteorEvent extends BaseEvent implements Listener {
         Set<Set<Player>> groups = sessionGroups.get(sessionId);
         if (groups == null) return;
 
+        // Get total meteors that should be spawned for this session
+        int totalPlayers = players.size();
+        int meteorsPerPlayer = plugin.getConfigManager().getConfigValue(getName(), "amountPerPlayer");
+        int totalMeteorsForSession = totalPlayers * meteorsPerPlayer;
+
+        // If we've already spawned all meteors, don't spawn more
+        Integer spawned = totalMeteorsSpawned.get(sessionId);
+        if (spawned != null && spawned >= totalMeteorsForSession) {
+            return;
+        }
+
         for (Set<Player> group : groups) {
             Location groupMidpoint = LocationHelper.findMidpoint(group);
             if (groupMidpoint == null) continue;
 
-            int meteorsPerPlayer = plugin.getConfigManager().getConfigValue(getName(), "amountPerPlayer");
+            // Calculate how many meteors to spawn this tick
             int meteorsThisTick = Math.max(1, (meteorsPerPlayer * group.size()) / 20);
+            
+            // Adjust meteorsThisTick to not exceed the total remaining
+            int remainingMeteors = totalMeteorsForSession - spawned;
+            meteorsThisTick = Math.min(meteorsThisTick, remainingMeteors);
 
             for (int i = 0; i < meteorsThisTick; i++) {
                 if (random.nextDouble() < 0.7) {
-                    spawnMeteorAtLocation(groupMidpoint);
+                    spawnMeteorAtLocation(groupMidpoint, sessionId);
                 }
             }
         }
@@ -104,6 +126,8 @@ public class MeteorEvent extends BaseEvent implements Listener {
     @Override
     public void onEnd(UUID sessionId, Set<Player> players) {
         sessionGroups.remove(sessionId);
+        totalMeteorsSpawned.remove(sessionId);
+        meteorsHit.remove(sessionId);
         if (sessionId.equals(currentSessionId)) {
             this.currentSessionId = null;
         }
@@ -217,8 +241,8 @@ public class MeteorEvent extends BaseEvent implements Listener {
         }
     }
 
-    private void spawnMeteorAtLocation(Location targetLoc) {
-        if (currentSessionId == null) {
+    private void spawnMeteorAtLocation(Location targetLoc, UUID sessionId) {
+        if (sessionId == null) {
             plugin.getLogger().warning("Attempted to spawn meteor with null sessionId");
             return;
         }
@@ -232,18 +256,31 @@ public class MeteorEvent extends BaseEvent implements Listener {
         double spawnY = 256;
 
         Location meteorSpawnLoc = new Location(world, targetLoc.getX() + offsetX, spawnY, targetLoc.getZ() + offsetZ);
-
-        Fireball fireball = world.spawn(meteorSpawnLoc, Fireball.class);
         Vector direction = new Vector((random.nextDouble() - 0.5) * 0.2, -1.0, (random.nextDouble() - 0.5) * 0.2);
-        fireball.setDirection(direction.normalize());
-        fireball.setYield(0.0F);
-        fireball.setIsIncendiary(false);
-        fireball.setShooter(null);
-        
-        // Store both the meteor flag and the session ID
-        MetadataHelper.setMetadata(fireball, METEOR_METADATA_KEY, true, plugin);
-        PersistentDataHelper.set(fireball.getPersistentDataContainer(), plugin, METEOR_SESSION_KEY, 
-                                PersistentDataType.STRING, currentSessionId.toString());
+
+        // Use ProjectileManager to spawn the meteor
+        Fireball fireball = projectileManager.spawnTracked(
+            Fireball.class,
+            meteorSpawnLoc,
+            direction,
+            null, // No shooter
+            sessionId,
+            0.0, // No damage (we handle this in the hit event)
+            1.0  // Normal speed
+        );
+
+        if (fireball != null) {
+            fireball.setYield(0.0F);
+            fireball.setIsIncendiary(false);
+            
+            // Store both the meteor flag and the session ID
+            MetadataHelper.setMetadata(fireball, METEOR_METADATA_KEY, true, plugin);
+            PersistentDataHelper.set(fireball.getPersistentDataContainer(), plugin, METEOR_SESSION_KEY, 
+                                    PersistentDataType.STRING, sessionId.toString());
+            
+            // Increment total meteors spawned
+            totalMeteorsSpawned.merge(sessionId, 1, Integer::sum);
+        }
     }
 
     @EventHandler
@@ -277,12 +314,21 @@ public class MeteorEvent extends BaseEvent implements Listener {
         MetadataHelper.removeMetadata(fireball, METEOR_METADATA_KEY, plugin);
         PersistentDataHelper.remove(fireball.getPersistentDataContainer(), plugin, METEOR_SESSION_KEY);
 
-        //plugin.getLogger().info("Meteor hit detected for session: " + sessionId);
+        // Increment meteors hit
+        meteorsHit.merge(sessionId, 1, Integer::sum);
+
+        // Check if all meteors have hit
+        Integer totalSpawned = totalMeteorsSpawned.get(sessionId);
+        Integer totalHit = meteorsHit.get(sessionId);
+        if (totalSpawned != null && totalHit != null && totalSpawned.equals(totalHit)) {
+            // All meteors have hit, end the session
+            sessionRegistry.endSession(sessionId);
+            return;
+        }
 
         // Check if it hit a block
         if (event.getHitBlock() != null) {
             Location impactLocation = event.getHitBlock().getLocation().add(0.5, 1, 0.5);
-            //plugin.getLogger().info("Meteor hit block at " + impactLocation);
 
             // Find nearest player to target
             Player nearestPlayer = null;
@@ -299,7 +345,6 @@ public class MeteorEvent extends BaseEvent implements Listener {
             double lootChance = plugin.getConfigManager().getConfigValue(getName(), "lootChance");
             lootChance = Math.max(0.0, Math.min(1.0, lootChance));
             
-            // plugin.getLogger().info("Rolling for loot with chance: " + lootChance);
             if (random.nextDouble() < lootChance) {
                 List<ItemStack> rewards = rewardGenerator.generateRewards(
                     new TierQuantity()
@@ -309,7 +354,6 @@ public class MeteorEvent extends BaseEvent implements Listener {
                 );
                 
                 if (!rewards.isEmpty()) {
-                    //plugin.getLogger().info("Dropping " + rewards.size() + " reward items");
                     for (ItemStack itemStack : rewards) {
                         impactLocation.getWorld().dropItemNaturally(impactLocation, itemStack);
                     }

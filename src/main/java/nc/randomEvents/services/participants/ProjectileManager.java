@@ -90,8 +90,10 @@ public class ProjectileManager implements Listener, SessionParticipant {
         if (projectiles != null) {
             for (World world : plugin.getServer().getWorlds()) {
                 for (Entity entity : world.getEntities()) {
+                    // Check both UUID tracking and persistent data
                     if (projectiles.contains(entity.getUniqueId()) || isSessionProjectile(entity, sessionId)) {
                         entity.remove();
+                        plugin.getLogger().info("Removed projectile: " + entity.getUniqueId() + " for session: " + sessionId);
                     }
                 }
             }
@@ -99,6 +101,14 @@ public class ProjectileManager implements Listener, SessionParticipant {
     }
 
     private boolean isSessionProjectile(Entity entity, UUID sessionId) {
+        if (!(entity instanceof Projectile)) return false;
+        
+        // First check if it's a tracked projectile at all
+        if (!PersistentDataHelper.has(entity.getPersistentDataContainer(), plugin, PROJECTILE_KEY, PersistentDataType.BYTE)) {
+            return false;
+        }
+        
+        // Then check if it belongs to this session
         String storedSessionId = PersistentDataHelper.get(entity.getPersistentDataContainer(), plugin, 
                                                         PROJECTILE_SESSION_KEY, PersistentDataType.STRING);
         return storedSessionId != null && storedSessionId.equals(sessionId.toString());
