@@ -157,6 +157,8 @@ public class MeteorEvent extends BaseEvent implements Listener {
             if (entity instanceof Blaze) {
                 spawnedEnemyCount++; // Increment counter on successful spawn
                 Blaze blaze = (Blaze) entity;
+                // Play blaze hurt sound with increased volume
+                SoundHelper.playWorldSoundSafely(location.getWorld(), "entity.blaze.hurt", location, 2.0f, 1.0f);
                 //EntityHelper.setMovementSpeed(blaze, 0.0); // Make it completely stationary
                 //blaze.setGravity(false); // Prevent up/down movement
                 if (target != null) {
@@ -188,9 +190,7 @@ public class MeteorEvent extends BaseEvent implements Listener {
                                 2.5, // Half of normal Blaze fireball damage (5)
                                 1.5  // Speed multiplier
                             );
-                            
-                            // Play Blaze shoot sound
-                            blaze.getWorld().playSound(blazeLoc, "entity.blaze.shoot", 1.0f, 1.0f);
+                            SoundHelper.playWorldSoundSafely(blazeLoc.getWorld(), "entity.blaze.shoot", blazeLoc, 1.0f, 1.0f);
                         }
                     }
                 }.runTaskTimer(plugin, 20L, 30L); // Shoot every second (20 ticks)
@@ -200,6 +200,8 @@ public class MeteorEvent extends BaseEvent implements Listener {
             if (entity instanceof MagmaCube) {
                 spawnedEnemyCount++; // Increment counter on successful spawn
                 MagmaCube magma = (MagmaCube) entity;
+                // Play magma cube squish sound with increased volume
+                SoundHelper.playWorldSoundSafely(location.getWorld(), "entity.magma_cube.squish", location, 2.0f, 1.0f);
                 magma.setSize(6);
                 magma.setHealth(12);
                 EntityHelper.setMovementSpeed(magma, 0.23 * 4.0); // 4x normal speed (0.23 is base speed)
@@ -230,9 +232,7 @@ public class MeteorEvent extends BaseEvent implements Listener {
                                 direction.setY(0.5);
                                 
                                 EntityHelper.launchEntity(magma, direction, 1.5);
-                                
-                                // Play jump sound
-                                magma.getWorld().playSound(magmaLoc, "entity.magma_cube.jump", 1.0f, 0.8f);
+                                SoundHelper.playWorldSoundSafely(magmaLoc.getWorld(), "entity.magma_cube.squish", magmaLoc,1.0f, 1.0f);
                             }
                         }
                     }
