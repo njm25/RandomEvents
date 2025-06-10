@@ -79,14 +79,22 @@ public class ProjectileManager implements Listener, SessionParticipant {
     public void onSessionEnd(UUID sessionId) {
         plugin.getLogger().info("ProjectileManager cleaning up session: " + sessionId);
         EventSession session = sessionRegistry.getSession(sessionId);
-        // Only clean up projectiles if the session exists and the event wants them cleaned up
-        if (session != null && session.getEvent().clearProjectilesAtEnd()) {
+        
+        // Skip if session is already gone
+        if (session == null) {
+            cleanupSession(sessionId);
+            return;
+        }
+        
+        // Get cleanup flag before session might be unregistered
+        boolean shouldCleanup = session.getEvent().clearProjectilesAtEnd();
+        if (shouldCleanup) {
             cleanupSession(sessionId);
         }
     }
 
     private void cleanupSession(UUID sessionId) {
-        Set<UUID> projectiles = sessionProjectiles.remove(sessionId);
+        Set<UUID> projectiles = sessionProjectiles.get(sessionId);
         if (projectiles != null) {
             for (World world : plugin.getServer().getWorlds()) {
                 for (Entity entity : world.getEntities()) {
@@ -98,6 +106,7 @@ public class ProjectileManager implements Listener, SessionParticipant {
                 }
             }
         }
+        sessionProjectiles.remove(sessionId);
     }
 
     private boolean isSessionProjectile(Entity entity, UUID sessionId) {
