@@ -50,7 +50,7 @@ public class SheepocalypseEvent extends BaseEvent implements Listener {
 
         // Configure event settings
         setTickInterval(80L); // Spawn sheep every 4 seconds
-        int durationSeconds = plugin.getConfigManager().getConfigValue(getName(), "duration");
+        int durationSeconds = plugin.getConfigManager().getIntValue(getName(), "duration");
         setDuration(durationSeconds * 20L); // Convert seconds to ticks
         setStripsInventory(false);
         setCanBreakBlocks(true);

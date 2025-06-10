@@ -130,6 +130,65 @@ public class ConfigManager {
         }
     }
 
+    public Integer getIntValue(String eventName, String key) {
+        String path = "events." + eventName + "." + key;
+        Object value = plugin.getConfig().get(path);
+
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+
+        if (value != null) {
+            logger.warning("Invalid type for config value at " + path + ": expected int but got " + value);
+        }
+
+        // Try default config
+        Object defaultVal = defaultConfig.get(path);
+        if (defaultVal instanceof Number) {
+            return ((Number) defaultVal).intValue();
+        }
+
+        if (defaultVal != null) {
+            logger.warning("Invalid default type at " + path + ": expected int but got " + defaultVal);
+        }
+
+        return null;
+    }
+
+    public Double getDoubleValue(String eventName, String key) {
+        String path = "events." + eventName + "." + key;
+        Object value = plugin.getConfig().get(path);
+
+        if (value instanceof Number) {
+            return ((Number) value).doubleValue();
+        }
+
+        if (value != null) {
+            logger.warning("Invalid type for config value at " + path + ": expected double but got " + value);
+        }
+
+        // Try default config
+        Object defaultVal = defaultConfig.get(path);
+        if (defaultVal instanceof Number) {
+            return ((Number) defaultVal).doubleValue();
+        }
+
+        if (defaultVal != null) {
+            logger.warning("Invalid default type at " + path + ": expected double but got " + defaultVal);
+        }
+
+        return null;
+    }
+
+    public Integer getIntValue(BaseEvent event, String key) {
+        return getIntValue(event.getName(), key);
+    }
+
+    public Double getDoubleValue(BaseEvent event, String key) {
+        return getDoubleValue(event.getName(), key);
+    }
+
+    // Keep the generic method for non-numeric types
     public <T> T getConfigValue(BaseEvent event, String key) {
         return getConfigValue(event.getName(), key);
     }

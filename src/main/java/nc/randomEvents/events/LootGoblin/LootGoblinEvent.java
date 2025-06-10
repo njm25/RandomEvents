@@ -127,7 +127,7 @@ public class LootGoblinEvent extends BaseEvent implements Listener {
         goblin.setCustomNameVisible(true);
 
         // Set movement speed using EntityHelper
-        double speedMultiplier = plugin.getConfigManager().getConfigValue(getName(), "speed");
+        double speedMultiplier = plugin.getConfigManager().getDoubleValue(getName(), "speed");
         EntityHelper.setMovementSpeed(goblin, speedMultiplier * 0.23); // 0.23 is base zombie speed
         
         // Clear equipment
