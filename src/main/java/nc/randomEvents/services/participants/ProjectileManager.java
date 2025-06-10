@@ -94,7 +94,6 @@ public class ProjectileManager implements Listener, SessionParticipant {
                     // Check both UUID tracking and persistent data
                     if (projectiles.contains(entity.getUniqueId()) || isSessionProjectile(entity, sessionId)) {
                         entity.remove();
-                        plugin.getLogger().info("Removed projectile: " + entity.getUniqueId() + " for session: " + sessionId);
                     }
                 }
             }
