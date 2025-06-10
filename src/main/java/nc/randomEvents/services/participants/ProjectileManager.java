@@ -79,13 +79,6 @@ public class ProjectileManager implements Listener, SessionParticipant {
     public void onSessionEnd(UUID sessionId) {
         plugin.getLogger().info("ProjectileManager cleaning up session: " + sessionId);
         EventSession session = sessionRegistry.getSession(sessionId);
-        
-        // Skip if session is already gone
-        if (session == null) {
-            cleanupSession(sessionId);
-            return;
-        }
-        
         // Get cleanup flag before session might be unregistered
         boolean shouldCleanup = session.getEvent().clearProjectilesAtEnd();
         if (shouldCleanup) {
