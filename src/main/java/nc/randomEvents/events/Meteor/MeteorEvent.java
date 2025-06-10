@@ -193,7 +193,7 @@ public class MeteorEvent extends BaseEvent implements Listener {
                             blaze.getWorld().playSound(blazeLoc, "entity.blaze.shoot", 1.0f, 1.0f);
                         }
                     }
-                }.runTaskTimer(plugin, 20L, 20L); // Shoot every second (20 ticks)
+                }.runTaskTimer(plugin, 20L, 30L); // Shoot every second (20 ticks)
             }
         } else if (random.nextDouble() < enemySpawnChance) {
             entity = entityManager.spawnTracked(EntityType.MAGMA_CUBE, location, "meteor_magma", sessionId);
