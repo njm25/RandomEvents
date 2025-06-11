@@ -3,10 +3,14 @@ package nc.randomEvents.services;
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.core.BaseEvent;
 import nc.randomEvents.core.EventSession;
-import nc.randomEvents.events.Test.EquipmentManagerTest.EquipmentManagerTest;
-import nc.randomEvents.events.Test.ItemHelperTest.ItemHelperTest;
-import nc.randomEvents.events.Test.BaseEventTest.BaseEventTest;
-import nc.randomEvents.events.Test.EntityManagerTest.EntityManagerTest;
+import nc.randomEvents.events.ZombieHorde.ZombieHordeEvent;
+import nc.randomEvents.events.tests.BaseEventTest;
+import nc.randomEvents.events.tests.EntityManagerTest;
+import nc.randomEvents.events.tests.EquipmentManagerTest;
+import nc.randomEvents.events.tests.ItemHelperTest;
+import nc.randomEvents.events.LootGoblin.LootGoblinEvent;
+import nc.randomEvents.events.Sheepocalypse.SheepocalypseEvent;
+import nc.randomEvents.events.Meteor.MeteorEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -34,6 +38,10 @@ public class EventManager {
         addEvent(new ItemHelperTest(plugin));
         addEvent(new BaseEventTest(plugin));
         addEvent(new EntityManagerTest(plugin));
+        addEvent(new LootGoblinEvent(plugin));
+        addEvent(new ZombieHordeEvent(plugin));
+        addEvent(new SheepocalypseEvent(plugin));
+        addEvent(new MeteorEvent(plugin));
     }
 
     public void addEvent(BaseEvent event) {

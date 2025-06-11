@@ -3,7 +3,9 @@ events:
     radius: 40
     amountPerPlayer: 5
     lootChance: 0.4
-  ZombieHoardEvent:
+    enemySpawnChance: 0.5
+    maxEnemySpawns: 6
+  ZombieHordeEvent:
     waves: 2
     zombiesPerWave: 10
   Sheepocalypse:

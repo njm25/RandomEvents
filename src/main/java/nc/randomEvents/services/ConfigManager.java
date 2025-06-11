@@ -4,7 +4,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import nc.randomEvents.RandomEvents;
-import nc.randomEvents.events.Event;
+import nc.randomEvents.core.BaseEvent;
 
 import java.io.File;
 import java.io.InputStream;
@@ -130,11 +130,11 @@ public class ConfigManager {
         }
     }
 
-    public <T> T getConfigValue(Event event, String key) {
+    public <T> T getConfigValue(BaseEvent event, String key) {
         return getConfigValue(event.getName(), key);
     }
 
-    public ConfigurationSection getEventConfig(Event event) {
+    public ConfigurationSection getEventConfig(BaseEvent event) {
         String eventName = event.getName();
         ConfigurationSection eventSection = plugin.getConfig().getConfigurationSection("events." + eventName);
         

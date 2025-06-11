@@ -37,10 +37,12 @@ public class SessionRegistry {
      * Remove a session from the registry and notify participants
      */
     public void unregisterSession(UUID sessionId) {
-        EventSession session = activeSessions.remove(sessionId);
+        EventSession session = activeSessions.get(sessionId);
         if (session != null) {
-            // Notify all participants of session end
+            // Notify all participants of session end BEFORE removing the session
             participants.forEach(p -> p.onSessionEnd(sessionId));
+            // Now remove the session
+            activeSessions.remove(sessionId);
         }
     }
     

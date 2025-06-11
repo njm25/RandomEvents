@@ -10,6 +10,8 @@ import org.bukkit.World;
 import org.bukkit.entity.Sheep;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.util.Random;
 
@@ -35,10 +37,25 @@ public class SheepBomb {
         
         // Initialize sheep
         sheep.setColor(DyeColor.LIME);
+        sheep.setCustomNameVisible(true);
+        updateSheepName();
         
         // Start the countdown and movement
         startCountdown();
         startMovement();
+    }
+
+    private void updateSheepName() {
+        if (sheep != null && !sheep.isDead()) {
+            int secondsLeft = Math.max(0, timeLeft / 20); // Convert ticks to seconds
+            NamedTextColor color = NamedTextColor.GREEN; // Default lime green
+            if (timeLeft <= 60) {
+                color = NamedTextColor.RED;
+            } else if (timeLeft <= 120) {
+                color = NamedTextColor.YELLOW;
+            }
+            sheep.customName(Component.text(String.valueOf(secondsLeft), color));
+        }
     }
 
     private void startMovement() {
@@ -83,7 +100,9 @@ public class SheepBomb {
 
     private void startCountdown() {
         colorChangeTask = new BukkitRunnable() {
+            private DyeColor currentColor = DyeColor.LIME;
             private boolean hasPlayedHiss = false;
+            
             @Override
             public void run() {
                 if (sheep == null || sheep.isDead()) {
@@ -92,6 +111,7 @@ public class SheepBomb {
                 }
 
                 timeLeft -= 1; // Decrease by 1 tick
+                updateSheepName();
                 
                 if (timeLeft <= 0) {
                     explode();
@@ -99,20 +119,30 @@ public class SheepBomb {
                     return;
                 }
 
-                // Update color based on time left
+                // Update color and play sounds based on time left
                 if (timeLeft <= 60) { // Last 3 seconds
-                    sheep.setColor(DyeColor.RED);
-                    // Play tick sound during red phase
-                    if (timeLeft % 20 == 0) { // Every second
-                        SoundHelper.playWorldSoundSafely(sheep.getWorld(), "block.note.hat", sheep.getLocation(), 1.0f, 0.5f);
+                    if (currentColor != DyeColor.RED) {
+                        currentColor = DyeColor.RED;
+                        sheep.setColor(DyeColor.RED);
+                        SoundHelper.playWorldSoundSafely(sheep.getWorld(), "block.note_block.pling", sheep.getLocation(), 1.0f, 0.5f);
                     }
-                    // Add creeper hiss only once when entering final second
+                    
+                    // Play tick sound every second during red phase
+                    if (timeLeft % 20 == 0) {
+                        SoundHelper.playWorldSoundSafely(sheep.getWorld(), "block.note_block.hat", sheep.getLocation(), 1.0f, 0.5f);
+                    }
+                    
+                    // Add creeper hiss in final second
                     if (timeLeft == 20 && !hasPlayedHiss) {
-                        SoundHelper.playWorldSoundSafely(sheep.getWorld(), "entity.creeper.primed", sheep.getLocation(), 1.0f, 1.0f);
                         hasPlayedHiss = true;
+                        SoundHelper.playWorldSoundSafely(sheep.getWorld(), "entity.creeper.primed", sheep.getLocation(), 1.0f, 1.0f);
                     }
                 } else if (timeLeft <= 120) { // 3-6 seconds
-                    sheep.setColor(DyeColor.YELLOW);
+                    if (currentColor != DyeColor.YELLOW) {
+                        currentColor = DyeColor.YELLOW;
+                        sheep.setColor(DyeColor.YELLOW);
+                        SoundHelper.playWorldSoundSafely(sheep.getWorld(), "block.note_block.pling", sheep.getLocation(), 1.0f, 1.0f);
+                    }
                 }
             }
         }.runTaskTimer(plugin, 0L, 1L);

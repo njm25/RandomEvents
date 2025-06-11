@@ -1,7 +1,17 @@
-package nc.randomEvents.services;
+package nc.randomEvents;
 
-import nc.randomEvents.RandomEvents;
 import nc.randomEvents.commands.CommandManager;
+import nc.randomEvents.services.ConfigManager;
+import nc.randomEvents.services.DataManager;
+import nc.randomEvents.services.DisableManager;
+import nc.randomEvents.services.EventManager;
+import nc.randomEvents.services.RewardGenerator;
+import nc.randomEvents.services.SessionRegistry;
+import nc.randomEvents.services.participants.BlockManager;
+import nc.randomEvents.services.participants.EntityManager;
+import nc.randomEvents.services.participants.EquipmentManager;
+import nc.randomEvents.services.participants.ProjectileManager;
+import nc.randomEvents.services.participants.TestManager;
 import nc.randomEvents.utils.Metrics;
 
 public class StartManager {
@@ -25,6 +35,7 @@ public class StartManager {
         plugin.setBlockManager(new BlockManager(plugin));
         plugin.setTestManager(new TestManager(plugin));
         plugin.setEntityManager(new EntityManager(plugin));
+        plugin.setProjectileManager(new ProjectileManager(plugin));
 
         // Third layer: Event system that coordinates everything
         plugin.setEventManager(new EventManager(plugin));

@@ -1,6 +1,7 @@
-package nc.randomEvents.services;
+package nc.randomEvents.services.participants;
 
 import nc.randomEvents.core.SessionParticipant;
+import nc.randomEvents.services.SessionRegistry;
 
 import java.util.UUID;
 import org.bukkit.entity.Player;

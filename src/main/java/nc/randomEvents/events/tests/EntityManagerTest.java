@@ -1,8 +1,8 @@
-package nc.randomEvents.events.Test.EntityManagerTest;
+package nc.randomEvents.events.tests;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.core.BaseEvent;
-import nc.randomEvents.services.EntityManager;
+import nc.randomEvents.services.participants.EntityManager;
 import nc.randomEvents.utils.EntityHelper;
 import net.kyori.adventure.text.Component;
 

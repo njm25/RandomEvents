@@ -1,13 +1,15 @@
 package nc.randomEvents.events.LootGoblin;
 
 import nc.randomEvents.RandomEvents;
-import nc.randomEvents.events.Event;
+import nc.randomEvents.core.BaseEvent;
+import nc.randomEvents.services.participants.EntityManager;
 import nc.randomEvents.utils.SoundHelper;
+import nc.randomEvents.utils.EntityHelper;
+import nc.randomEvents.utils.PersistentDataHelper;
 
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
-import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -22,58 +24,52 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
+import org.bukkit.persistence.PersistentDataType;
 
-import nc.randomEvents.utils.AttributeHelper;
-import nc.randomEvents.utils.MetadataHelper;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class LootGoblinEvent implements Event, Listener {
+public class LootGoblinEvent extends BaseEvent implements Listener {
     private final RandomEvents plugin;
+    private final EntityManager entityManager;
     private final Random random = new Random();
-    private static final String LOOT_GOBLIN_METADATA_KEY = MetadataHelper.METADATA_PREFIX + "loot_goblin";
-    private static final String STOLEN_ITEM_METADATA_KEY = MetadataHelper.METADATA_PREFIX + "loot_goblin_stolen_item";
-    private static final String CRYING_METADATA_KEY = MetadataHelper.METADATA_PREFIX + "loot_goblin_crying";
-
-    private final Map<UUID, GoblinTask> activeGoblins = new ConcurrentHashMap<>(); // Zombie UUID to its task
-    private static final int CHEST_SEARCH_RADIUS = 20;
-    private static final int FLEE_TIMEOUT_SECONDS = 60;
-
-    // Item Categorization Sets
-    private static final Set<Material> HIGH_VALUE_ITEMS = EnumSet.of(
-            Material.DIAMOND, Material.DIAMOND_BLOCK,
-            Material.EMERALD, Material.EMERALD_BLOCK,
-            Material.NETHERITE_INGOT, Material.NETHERITE_BLOCK, Material.NETHERITE_SCRAP, Material.ANCIENT_DEBRIS,
-            Material.TOTEM_OF_UNDYING, Material.ELYTRA,
-            Material.ENCHANTED_BOOK,
-            Material.NETHER_STAR, Material.BEACON,
-            Material.SHULKER_BOX
-    );
-
-    private static final Set<Material> VALUABLE_MINERALS = EnumSet.of(
-            Material.GOLD_INGOT, Material.GOLD_BLOCK, Material.RAW_GOLD, Material.RAW_GOLD_BLOCK,
-            Material.IRON_INGOT, Material.IRON_BLOCK, Material.RAW_IRON, Material.RAW_IRON_BLOCK,
-            Material.LAPIS_LAZULI, Material.LAPIS_BLOCK,
-            Material.REDSTONE, Material.REDSTONE_BLOCK,
-            Material.COAL, Material.COAL_BLOCK,
-            Material.QUARTZ, Material.QUARTZ_BLOCK,
-            Material.AMETHYST_SHARD, Material.COPPER_INGOT, Material.RAW_COPPER // Added Copper
-    );
-
-    // Helper method to identify armor
-    private static boolean isArmor(Material material) {
-        String name = material.name();
-        // Covers leather, chainmail, iron, gold, diamond, netherite, turtle helmets
-        return name.endsWith("_HELMET") || name.endsWith("_CHESTPLATE") ||
-               name.endsWith("_LEGGINGS") || name.endsWith("_BOOTS");
-    }
+    private final Map<UUID, GoblinTask> activeGoblins = new ConcurrentHashMap<>(); // Goblin UUID to its task
+    private static final String LOOT_GOBLIN_TAG = "loot_goblin";
+    private static final String CRYING_TAG = "crying";
 
     public LootGoblinEvent(RandomEvents plugin) {
         this.plugin = plugin;
+        this.entityManager = plugin.getEntityManager();
         Bukkit.getPluginManager().registerEvents(this, plugin);
+        
+        // Configure event settings
+        setTickInterval(0); // No ticking needed
+        setDuration(0); // No fixed duration
+        setStripsInventory(false);
+        setCanBreakBlocks(true);
+        setCanPlaceBlocks(true);
+        setMaxPlayers(1);
+    }
+
+    @Override
+    public void onStart(UUID sessionId, Set<Player> players) {
+        for (Player player : players) {
+            if (!player.isOnline() || player.isDead()) continue;
+            spawnGoblinForPlayer(player, sessionId);
+        }
+    }
+
+    @Override
+    public void onTick(UUID sessionId, Set<Player> players) {
+        // No ticking needed
+    }
+
+    @Override
+    public void onEnd(UUID sessionId, Set<Player> players) {
+
     }
 
     @Override
@@ -86,15 +82,7 @@ public class LootGoblinEvent implements Event, Listener {
         return "A mischievous Loot Goblin appears! Catch it if you can!";
     }
 
-    @Override
-    public void execute(Set<Player> players) {
-        for (Player player : players) {
-            if (!player.isOnline() || player.isDead()) continue;
-            spawnGoblinForPlayer(player);
-        }
-    }
-
-    private void spawnGoblinForPlayer(Player player) {
+    private void spawnGoblinForPlayer(Player player, UUID sessionId) {
         Location playerLoc = player.getLocation();
         World world = player.getWorld();
         Location spawnLoc = null;
@@ -127,25 +115,26 @@ public class LootGoblinEvent implements Event, Listener {
             return;
         }
 
-        PigZombie goblin = (PigZombie) world.spawnEntity(spawnLoc, EntityType.ZOMBIFIED_PIGLIN);
+        // Spawn and track the goblin using EntityManager
+        PigZombie goblin = entityManager.spawnTracked(EntityType.ZOMBIFIED_PIGLIN, spawnLoc, "loot_goblin", player.getUniqueId());
+        
+        // Add loot goblin tag
+        PersistentDataHelper.set(goblin.getPersistentDataContainer(), plugin, LOOT_GOBLIN_TAG, PersistentDataType.BYTE, (byte)1);
+        
+        // Configure goblin attributes
         goblin.setAge(-1); // Ensure it's a baby
         goblin.customName(Component.text("Loot Goblin", NamedTextColor.GOLD));
         goblin.setCustomNameVisible(true);
 
-        Attribute movementSpeed = AttributeHelper.getAttributeSafely("MOVEMENT_SPEED");
-        if (goblin.getAttribute(movementSpeed) != null) {
-            double speedMultiplier = plugin.getConfigManager().getConfigValue(getName(), "speed");
-            double baseSpeed = goblin.getAttribute(movementSpeed).getBaseValue();
-            goblin.getAttribute(movementSpeed).setBaseValue(baseSpeed * speedMultiplier);
-        }
+        // Set movement speed using EntityHelper
+        double speedMultiplier = plugin.getConfigManager().getConfigValue(getName(), "speed");
+        EntityHelper.setMovementSpeed(goblin, speedMultiplier * 0.23); // 0.23 is base zombie speed
         
-        // Ensure goblin starts with an empty hand
+        // Clear equipment
         if (goblin.getEquipment() != null) {
-            goblin.getEquipment().setItemInMainHand(new ItemStack(Material.AIR));
-            goblin.getEquipment().setItemInMainHandDropChance(0.0f); // Prevent dropping this 'nothing'
+            goblin.getEquipment().clear();
+            goblin.getEquipment().setItemInMainHandDropChance(0.0f);
         }
-
-        MetadataHelper.setMetadata(goblin, LOOT_GOBLIN_METADATA_KEY, true, plugin);
 
         // Make goblin completely passive
         goblin.setTarget(null);
@@ -163,7 +152,7 @@ public class LootGoblinEvent implements Event, Listener {
             .append(Component.text(" has appeared nearby!", NamedTextColor.YELLOW)));
         SoundHelper.playWorldSoundSafely(world, "entity.piglin.jealous", goblin.getLocation(), 1.0f, 1.5f);
 
-        GoblinTask task = new GoblinTask(goblin, player);
+        GoblinTask task = new GoblinTask(goblin, player, sessionId);
         activeGoblins.put(goblin.getUniqueId(), task);
         task.runTaskTimer(plugin, 0L, 5L); // Run AI tick every 5 ticks (0.25s)
     }
@@ -193,61 +182,55 @@ public class LootGoblinEvent implements Event, Listener {
                !blockAtFeet.isLiquid() &&     // Not in liquid at feet
                !blockBelowFeet.isLiquid();    // Not standing on liquid source that looks solid (e.g. top of waterfall)
     }
+
     @EventHandler
     public void onEntityDeath(EntityDeathEvent event) {
         LivingEntity deadEntity = event.getEntity();
-        if (MetadataHelper.hasMetadata(deadEntity, LOOT_GOBLIN_METADATA_KEY)) {
+        if (PersistentDataHelper.has(deadEntity.getPersistentDataContainer(), plugin, LOOT_GOBLIN_TAG, PersistentDataType.BYTE)) {
             event.getDrops().clear(); // Clear default zombie drops
 
-            if (MetadataHelper.hasMetadata(deadEntity, STOLEN_ITEM_METADATA_KEY)) {
-                ItemStack stolenItem = (ItemStack) MetadataHelper.getMetadata(deadEntity, STOLEN_ITEM_METADATA_KEY).get(0).value();
-                if (stolenItem != null && stolenItem.getType() != Material.AIR) {
-                    deadEntity.getWorld().dropItemNaturally(deadEntity.getLocation(), stolenItem);
-                }
+            // Drop the stored item if it exists
+            ItemStack stolenItem = deadEntity.getEquipment().getItemInMainHand();
+            if (stolenItem != null && stolenItem.getType() != Material.AIR) {
+                deadEntity.getWorld().dropItemNaturally(deadEntity.getLocation(), stolenItem);
             }
+            
             // Victory sound/particle
             SoundHelper.playWorldSoundSafely(deadEntity.getWorld(), "entity.player.levelup", deadEntity.getLocation(), 1.0f, 1.2f);
             deadEntity.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, deadEntity.getLocation().add(0, 0.5, 0), 30, 0.5, 0.5, 0.5, 0.1);
             cleanupGoblin(deadEntity.getUniqueId(), false);
         }
-    }    
+    }
+
     @EventHandler
     public void onEntityCombust(EntityCombustEvent event) {
-        if (MetadataHelper.hasMetadata(event.getEntity(), LOOT_GOBLIN_METADATA_KEY)) {
+        if (PersistentDataHelper.has(event.getEntity().getPersistentDataContainer(), plugin, LOOT_GOBLIN_TAG, PersistentDataType.BYTE)) {
             event.setCancelled(true); // Prevent loot goblins from burning in daylight
         }
     }
 
     @EventHandler
     public void onEntityDamage(EntityDamageByEntityEvent event) {
-        if (!(event.getEntity() instanceof LivingEntity && MetadataHelper.hasMetadata(event.getEntity(), LOOT_GOBLIN_METADATA_KEY))) {
+        if (!(event.getEntity() instanceof LivingEntity) || 
+            !PersistentDataHelper.has(event.getEntity().getPersistentDataContainer(), plugin, LOOT_GOBLIN_TAG, PersistentDataType.BYTE)) {
             return;
         }
         LivingEntity livingEntity = (LivingEntity) event.getEntity();
-        // Now we know it's our goblin, cast if PigZombie specific methods are needed,
-        // but for current logic, LivingEntity is sufficient for most parts.
-        // For consistency and future use, we can cast to PigZombie if needed.
-        // PigZombie goblin = (PigZombie) livingEntity;
 
         // Cancel the damage event - we don't want the goblin to actually take damage
         event.setCancelled(true);
 
         // If already crying, ignore additional hits
-        if (MetadataHelper.hasMetadata(livingEntity, CRYING_METADATA_KEY)) return;
+        if (PersistentDataHelper.has(livingEntity.getPersistentDataContainer(), plugin, CRYING_TAG, PersistentDataType.BYTE)) return;
 
         // Mark as crying
-        MetadataHelper.setMetadata(livingEntity, CRYING_METADATA_KEY, true, plugin);
+        PersistentDataHelper.set(livingEntity.getPersistentDataContainer(), plugin, CRYING_TAG, PersistentDataType.BYTE, (byte)1);
 
         // Drop the item if carrying one
-        if (MetadataHelper.hasMetadata(livingEntity, STOLEN_ITEM_METADATA_KEY)) {
-            ItemStack stolenItem = (ItemStack) MetadataHelper.getMetadata(livingEntity, STOLEN_ITEM_METADATA_KEY).get(0).value();
-            if (stolenItem != null && stolenItem.getType() != Material.AIR) {
-                livingEntity.getWorld().dropItemNaturally(livingEntity.getLocation(), stolenItem);
-                if (livingEntity.getEquipment() != null) { // Null check for equipment
-                    livingEntity.getEquipment().setItemInMainHand(new ItemStack(Material.AIR));
-                }
-                MetadataHelper.removeMetadata(livingEntity, STOLEN_ITEM_METADATA_KEY, plugin);
-            }
+        ItemStack stolenItem = livingEntity.getEquipment().getItemInMainHand();
+        if (stolenItem != null && stolenItem.getType() != Material.AIR) {
+            livingEntity.getWorld().dropItemNaturally(livingEntity.getLocation(), stolenItem);
+            livingEntity.getEquipment().setItemInMainHand(null);
         }
 
         // Play crying effects
@@ -289,7 +272,7 @@ public class LootGoblinEvent implements Event, Listener {
 
     @EventHandler
     public void onGoblinTargetPlayer(EntityTargetLivingEntityEvent event) {
-        if (MetadataHelper.hasMetadata(event.getEntity(), LOOT_GOBLIN_METADATA_KEY)) {
+        if (PersistentDataHelper.has(event.getEntity().getPersistentDataContainer(), plugin, LOOT_GOBLIN_TAG, PersistentDataType.BYTE)) {
             if (event.getTarget() instanceof Player) {
                 // Prevent the Loot Goblin from targeting players
                 event.setCancelled(true);
@@ -301,33 +284,37 @@ public class LootGoblinEvent implements Event, Listener {
         GoblinTask task = activeGoblins.remove(goblinId);
         if (task != null) {
             task.cancel();
-            PigZombie goblinEntity = task.goblin; // Changed type
+            PigZombie goblinEntity = task.goblin;
             if (goblinEntity != null && goblinEntity.isValid()) {
-                if (withEscapeEffect && !goblinEntity.hasMetadata(CRYING_METADATA_KEY)) {
+                if (withEscapeEffect && !PersistentDataHelper.has(goblinEntity.getPersistentDataContainer(), plugin, CRYING_TAG, PersistentDataType.BYTE)) {
                     SoundHelper.playWorldSoundSafely(goblinEntity.getWorld(), "entity.fox.teleport", goblinEntity.getLocation(), 1.0f, 1.0f);
                     Location escapeParticleLoc = goblinEntity.getLocation().add(0, 1, 0);
                     goblinEntity.getWorld().spawnParticle(Particle.CLOUD, escapeParticleLoc.getX(), escapeParticleLoc.getY(), escapeParticleLoc.getZ(), 20, 0.3, 0.3, 0.3, 0.05);
                 }
                 goblinEntity.remove();
             }
+            // Since we have maxPlayers=1, each player has their own session
+            // End the session when their goblin is cleaned up
+            plugin.getSessionRegistry().endSession(task.sessionId);
         }
     }
 
     private class GoblinTask extends BukkitRunnable {
-        final PigZombie goblin; // Changed type from ZombifiedPiglin to PigZombie
+        final PigZombie goblin;
         final Player initialPlayerTarget;
+        final UUID sessionId;
         Block targetChest = null;
-        ItemStack carriedItem = null;
         boolean hasReachedChest = false;
         boolean isFleeing = false;
-        long spawnTime = System.currentTimeMillis(); // This marks the initial spawn or task start time
+        long spawnTime = System.currentTimeMillis();
         int fleePathfindTicks = 0;
         int fleeAttempts = 0;
         private Location fleeDestination = null;
 
-        GoblinTask(PigZombie goblin, Player player) { // Changed type
+        GoblinTask(PigZombie goblin, Player player, UUID sessionId) {
             this.goblin = goblin;
             this.initialPlayerTarget = player;
+            this.sessionId = sessionId;
         }
 
         @Override
@@ -347,12 +334,12 @@ public class LootGoblinEvent implements Event, Listener {
             if (!isFleeing && !hasReachedChest && (System.currentTimeMillis() - spawnTime) / 1000 > 30) {
                 plugin.getLogger().info("Loot Goblin for " + initialPlayerTarget.getName() + " timed out before reaching a chest.");
                 initialPlayerTarget.sendMessage(Component.text("The Loot Goblin got bored and vanished before finding a suitable chest!", NamedTextColor.YELLOW));
-                cleanupGoblin(goblin.getUniqueId(), true); // True for escape effect
+                cleanupGoblin(goblin.getUniqueId(), true);
                 return;
             }
 
             if (isFleeing) {
-                if ((System.currentTimeMillis() - spawnTime) / 1000 > FLEE_TIMEOUT_SECONDS + (fleeAttempts * 5)) { // Note: spawnTime is reset when fleeing starts
+                if ((System.currentTimeMillis() - spawnTime) / 1000 > 60 + (fleeAttempts * 5)) {
                     plugin.getLogger().info("Loot Goblin escaped from " + initialPlayerTarget.getName());
                     initialPlayerTarget.sendMessage(Component.text("The Loot Goblin got away!", NamedTextColor.RED));
                     cleanupGoblin(goblin.getUniqueId(), true);
@@ -365,7 +352,7 @@ public class LootGoblinEvent implements Event, Listener {
             }
 
             if (targetChest == null && !hasReachedChest) {
-                targetChest = findNearbyChest(goblin.getLocation(), CHEST_SEARCH_RADIUS);
+                targetChest = findNearbyChest(goblin.getLocation(), 20);
                 if (targetChest != null) {
                     SoundHelper.playWorldSoundSafely(goblin.getWorld(), "entity.piglin.admiring_item", goblin.getLocation(), 1.0f, 1.5f);
                 } else {
@@ -383,7 +370,7 @@ public class LootGoblinEvent implements Event, Listener {
                     hasReachedChest = true;
                     isFleeing = true;
                     spawnTime = System.currentTimeMillis();
-                    fleeFromPlayer(); 
+                    fleeFromPlayer();
                 } else {
                     // Path to the top center of the chest block to encourage climbing
                     Location pathTarget = targetChest.getLocation().add(0.5, 1.0, 0.5);
@@ -391,7 +378,7 @@ public class LootGoblinEvent implements Event, Listener {
                 }
             }
         }
-        
+
         private void stealFromChest() {
             if (targetChest.getState() instanceof Chest) {
                 Chest chest = (Chest) targetChest.getState();
@@ -431,16 +418,13 @@ public class LootGoblinEvent implements Event, Listener {
 
                 if (!possibleItems.isEmpty()) {
                     ItemStack stolen = possibleItems.get(random.nextInt(possibleItems.size()));
-                    // ItemStack stackStolen = stolen.clone(); // Already cloned when added to lists
-
                     // Try to remove the entire stack from the chest
-                    ItemStack toRemoveFromChest = stolen.clone(); // Use the chosen 'stolen' item for removal
+                    ItemStack toRemoveFromChest = stolen.clone();
                     HashMap<Integer, ItemStack> notRemoved = chestInv.removeItem(toRemoveFromChest);
                     
-                    if (notRemoved.isEmpty()){ // Successfully removed
-                        carriedItem = stolen; // Use the 'stolen' item which is already a clone
-                        goblin.getEquipment().setItemInMainHand(carriedItem);
-                        MetadataHelper.setMetadata(goblin, STOLEN_ITEM_METADATA_KEY, carriedItem, plugin);
+                    if (notRemoved.isEmpty()) { // Successfully removed
+                        // Store the item in the goblin's hand
+                        goblin.getEquipment().setItemInMainHand(stolen);
                         String itemDesc = stolen.getAmount() > 1 ?
                             stolen.getAmount() + " " + stolen.getType().toString().toLowerCase().replace('_', ' ') :
                             "a " + stolen.getType().toString().toLowerCase().replace('_', ' ');
@@ -449,23 +433,23 @@ public class LootGoblinEvent implements Event, Listener {
                     } else {
                         // Failed to remove (e.g. item changed by another player), goblin gives up on this chest
                         initialPlayerTarget.sendMessage(Component.text("The Loot Goblin fumbled with the chest and gave up!", NamedTextColor.YELLOW));
-                        targetChest = null; // Will try to find another or go aggro
+                        targetChest = null;
                         hasReachedChest = false;
                     }
                 } else {
-                     initialPlayerTarget.sendMessage(Component.text("The Loot Goblin peeked into a chest, but found nothing of interest!", NamedTextColor.YELLOW)); // Changed message
-                     targetChest = null; // Will try to find another or go aggro
-                     hasReachedChest = false;
+                    initialPlayerTarget.sendMessage(Component.text("The Loot Goblin peeked into a chest, but found nothing of interest!", NamedTextColor.YELLOW));
+                    targetChest = null;
+                    hasReachedChest = false;
                 }
             } else {
-                targetChest = null; // Not a chest anymore? Try again.
+                targetChest = null;
                 hasReachedChest = false;
             }
         }
 
         private void fleeFromPlayer() {
             if (!initialPlayerTarget.isValid() || !initialPlayerTarget.isOnline()) {
-                cleanupGoblin(goblin.getUniqueId(), true); // Player gone, goblin escapes
+                cleanupGoblin(goblin.getUniqueId(), true);
                 return;
             }
 
@@ -475,22 +459,21 @@ public class LootGoblinEvent implements Event, Listener {
             if (fleeDestination == null) {
                 Location playerLoc = initialPlayerTarget.getLocation();
                 double angle = random.nextDouble() * 2 * Math.PI;
-                double dx = Math.cos(angle) * 30; // 30 blocks away
+                double dx = Math.cos(angle) * 30;
                 double dz = Math.sin(angle) * 30;
                 Location dest = playerLoc.clone().add(dx, 0, dz);
                 // Set Y to highest block at that X/Z for safety
-                if (playerLoc.getWorld() != null) { // Null check for world
+                if (playerLoc.getWorld() != null) {
                     dest.setY(playerLoc.getWorld().getHighestBlockYAt(dest));
-                    fleeDestination = dest.add(0.5, 1.0, 0.5); // Center on block and ensure it's a walkable height
+                    fleeDestination = dest.add(0.5, 1.0, 0.5);
                 } else {
-                    // Fallback if world is null, shouldn't happen in normal gameplay
                     cleanupGoblin(goblin.getUniqueId(), true);
                     return;
                 }
             }
 
             // Simply tell the goblin to pathfind to the destination.
-            if (fleeDestination != null) { // Check if fleeDestination was successfully set
+            if (fleeDestination != null) {
                 goblin.getPathfinder().moveTo(fleeDestination);
 
                 // Check if the goblin has effectively reached its destination.
@@ -499,16 +482,13 @@ public class LootGoblinEvent implements Event, Listener {
                     plugin.getLogger().info("Loot Goblin reached its flee point and escaped from " + initialPlayerTarget.getName());
                     initialPlayerTarget.sendMessage(Component.text("The Loot Goblin disappeared into the shadows!", NamedTextColor.RED));
                     cleanupGoblin(goblin.getUniqueId(), true);
-                    return; // Goblin has escaped, task will be cancelled
+                    return;
                 }
             } else {
-                // If fleeDestination is still null (e.g. world was null), goblin escapes as a fallback
-                 plugin.getLogger().warning("Loot Goblin could not determine a flee destination, escaping.");
-                 cleanupGoblin(goblin.getUniqueId(), true);
-                 return;
+                plugin.getLogger().warning("Loot Goblin could not determine a flee destination, escaping.");
+                cleanupGoblin(goblin.getUniqueId(), true);
+                return;
             }
-
-            // Playful effects and step-by-step movement logic removed.
         }
 
         private Block findNearbyChest(Location center, double radius) {
@@ -530,5 +510,34 @@ public class LootGoblinEvent implements Event, Listener {
             }
             return chests.isEmpty() ? null : chests.get(random.nextInt(chests.size()));
         }
+    }
+
+    // Item Categorization Sets
+    private static final Set<Material> HIGH_VALUE_ITEMS = EnumSet.of(
+            Material.DIAMOND, Material.DIAMOND_BLOCK,
+            Material.EMERALD, Material.EMERALD_BLOCK,
+            Material.NETHERITE_INGOT, Material.NETHERITE_BLOCK, Material.NETHERITE_SCRAP, Material.ANCIENT_DEBRIS,
+            Material.TOTEM_OF_UNDYING, Material.ELYTRA,
+            Material.ENCHANTED_BOOK,
+            Material.NETHER_STAR, Material.BEACON,
+            Material.SHULKER_BOX
+    );
+
+    private static final Set<Material> VALUABLE_MINERALS = EnumSet.of(
+            Material.GOLD_INGOT, Material.GOLD_BLOCK, Material.RAW_GOLD, Material.RAW_GOLD_BLOCK,
+            Material.IRON_INGOT, Material.IRON_BLOCK, Material.RAW_IRON, Material.RAW_IRON_BLOCK,
+            Material.LAPIS_LAZULI, Material.LAPIS_BLOCK,
+            Material.REDSTONE, Material.REDSTONE_BLOCK,
+            Material.COAL, Material.COAL_BLOCK,
+            Material.QUARTZ, Material.QUARTZ_BLOCK,
+            Material.AMETHYST_SHARD, Material.COPPER_INGOT, Material.RAW_COPPER
+    );
+
+    // Helper method to identify armor
+    private static boolean isArmor(Material material) {
+        String name = material.name();
+        // Covers leather, chainmail, iron, gold, diamond, netherite, turtle helmets
+        return name.endsWith("_HELMET") || name.endsWith("_CHESTPLATE") ||
+               name.endsWith("_LEGGINGS") || name.endsWith("_BOOTS");
     }
 }

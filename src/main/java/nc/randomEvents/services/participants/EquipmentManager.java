@@ -1,9 +1,11 @@
-package nc.randomEvents.services;
+package nc.randomEvents.services.participants;
 
 import nc.randomEvents.RandomEvents;
+import nc.randomEvents.core.EventSession;
+import nc.randomEvents.core.SessionParticipant;
+import nc.randomEvents.services.SessionRegistry;
 import nc.randomEvents.utils.ItemHelper;
 import nc.randomEvents.utils.PersistentDataHelper;
-import nc.randomEvents.core.SessionParticipant;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
@@ -192,31 +194,28 @@ public class EquipmentManager implements Listener, SessionParticipant {
     public void onSessionEnd(UUID sessionId) {
         plugin.getLogger().info("EquipmentManager cleaning up session: " + sessionId);
 
-        boolean hasStripsInventory = this.strippedInventories.containsKey(sessionId);
+        boolean hasStrippedInventory = this.strippedInventories.containsKey(sessionId);
+        EventSession session = sessionRegistry.getSession(sessionId);
         
-        if (hasStripsInventory) {
+        // Only clean up equipment if the session exists and the event wants them cleaned up
+        if (session != null && session.getEvent().clearEquipmentAtEnd()) {
+            cleanupSession(sessionId);
+        }
+
+        // Always restore stripped inventories regardless of clearEquipmentAtEnd flag
+        if (hasStrippedInventory) {
             Map<UUID, StoredInventory> sessionInventories = strippedInventories.get(sessionId);
             if (sessionInventories != null) {
                 // Restore inventories for all players
                 for (Map.Entry<UUID, StoredInventory> entry : sessionInventories.entrySet()) {
                     Player player = plugin.getServer().getPlayer(entry.getKey());
                     if (player != null && player.isOnline()) {
-                        // Clear any event items first
-                        cleanupPlayerInventory(player, sessionId);
-                        
-                        // Restore the original inventory
                         entry.getValue().restore(player);
-                        player.sendMessage(Component.text("[Event] Your inventory has been restored.").color(NamedTextColor.GOLD));
                     }
                 }
-                
-                // Remove the session from our tracking
-                strippedInventories.remove(sessionId);
             }
+            strippedInventories.remove(sessionId);
         }
-        
-        // Cleanup any remaining event items
-        cleanupSession(sessionId);
     }
 
     /**

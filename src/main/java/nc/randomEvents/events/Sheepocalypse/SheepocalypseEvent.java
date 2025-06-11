@@ -1,12 +1,12 @@
 package nc.randomEvents.events.Sheepocalypse;
 
 import nc.randomEvents.RandomEvents;
-import nc.randomEvents.events.Event;
+import nc.randomEvents.core.BaseEvent;
 import nc.randomEvents.services.RewardGenerator;
+import nc.randomEvents.services.participants.EntityManager;
 import nc.randomEvents.utils.LocationHelper;
 import nc.randomEvents.utils.SoundHelper;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -17,34 +17,44 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.player.PlayerShearEntityEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.event.HandlerList;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class SheepocalypseEvent implements Event, Listener {
+public class SheepocalypseEvent extends BaseEvent implements Listener {
     private final RandomEvents plugin;
     private final RewardGenerator rewardGenerator;
+    private final EntityManager entityManager;
     private final Set<SheepBomb> activeSheep;
     private final Map<UUID, ItemStack> givenShears = new HashMap<>();
-    private BukkitTask spawnTask;
-    private BukkitTask checkEndTask;
-    private boolean isEventActive;
     private boolean isSpawningComplete;
+    private boolean isEventActive;
     private static final int GROUP_RADIUS = 50; // Radius for grouping players
     private final Random random = new Random();
 
     public SheepocalypseEvent(RandomEvents plugin) {
         this.plugin = plugin;
         this.rewardGenerator = plugin.getRewardGenerator();
+        this.entityManager = plugin.getEntityManager();
         this.activeSheep = new HashSet<>();
         this.isEventActive = false;
         this.isSpawningComplete = false;
+        
+        // Register events immediately and log it
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
+
+        // Configure event settings
+        setTickInterval(80L); // Spawn sheep every 4 seconds
+        int durationSeconds = plugin.getConfigManager().getConfigValue(getName(), "duration");
+        setDuration(durationSeconds * 20L); // Convert seconds to ticks
+        setStripsInventory(false);
+        setCanBreakBlocks(true);
+        setCanPlaceBlocks(true);
     }
 
     @Override
@@ -58,85 +68,98 @@ public class SheepocalypseEvent implements Event, Listener {
     }
 
     @Override
-    public void execute(Set<Player> players) {
+    public void onStart(UUID sessionId, Set<Player> players) {
         if (isEventActive) {
-            stopEvent(false);
+            onEnd(sessionId, players); // Use onEnd instead of stopEvent
         }
 
         isEventActive = true;
         isSpawningComplete = false;
         activeSheep.clear();
         givenShears.clear();
+
+
+
         for (Player player : players) {
             ItemStack shears = new ItemStack(Material.SHEARS);
-            player.getInventory().addItem(shears);
+            ItemMeta meta = shears.getItemMeta();
+            meta.displayName(Component.text("Sheep Defuser", NamedTextColor.AQUA).decorate(TextDecoration.ITALIC));
+            meta.lore(List.of(Component.text("Right click on sheep bombs to defuse them", NamedTextColor.GRAY)));
+            shears.setItemMeta(meta);
+            
+            // Give shears using equipment manager
+            plugin.getEquipmentManager().giveEquipment(player, shears, "sheep_defuser", sessionId);
             givenShears.put(player.getUniqueId(), shears);
+            
             player.sendMessage(Component.text("Oh no! ", NamedTextColor.GOLD).decorate(TextDecoration.BOLD)
                 .append(Component.text("The sheep have gone mad! Quick, shear them before they explode!", NamedTextColor.YELLOW)));
         }
+    }
 
-        // Start spawning sheep near player groups
-        spawnTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            if (!isEventActive || players.isEmpty()) {
-                stopEvent(false);
-                return;
+    @Override
+    public void onTick(UUID sessionId, Set<Player> players) {
+        if (players.isEmpty()) {
+            return;
+        }
+
+        // Filter out offline/dead players
+        Set<Player> activePlayers = players.stream()
+            .filter(p -> p.isOnline() && !p.isDead())
+            .collect(Collectors.toSet());
+
+        if (activePlayers.isEmpty()) {
+            return;
+        }
+
+        // Recalculate groups each tick to handle player movement
+        Set<Set<Player>> currentGroups = LocationHelper.groupPlayers(activePlayers, GROUP_RADIUS);
+
+        for (Set<Player> group : currentGroups) {
+            Location groupMidpoint = LocationHelper.findMidpoint(group);
+            if (groupMidpoint == null) continue;
+
+            // Find the player farthest from the midpoint to calculate spawn radius
+            double maxDistance = 0;
+            for (Player p : group) {
+                double dist = p.getLocation().distance(groupMidpoint);
+                maxDistance = Math.max(maxDistance, dist);
             }
 
-            // Recalculate groups each tick to handle player movement
-            Set<Set<Player>> currentGroups = LocationHelper.groupPlayers(
-                players.stream().filter(p -> p.isOnline() && !p.isDead()).collect(Collectors.toSet()),
-                GROUP_RADIUS
-            );
+            // Add 10 blocks to the max distance for spawn radius
+            double spawnRadius = maxDistance + 10;
 
-            for (Set<Player> group : currentGroups) {
-                Location groupMidpoint = LocationHelper.findMidpoint(group);
-                if (groupMidpoint == null) continue;
-
-                // Find the player farthest from the midpoint to calculate spawn radius
-                double maxDistance = 0;
-                for (Player p : group) {
-                    double dist = p.getLocation().distance(groupMidpoint);
-                    maxDistance = Math.max(maxDistance, dist);
+            // Try to spawn sheep - one for each player in the group
+            for (int i = 0; i < group.size(); i++) {
+                Location spawnLoc = findSafeSpawnLocation(groupMidpoint, spawnRadius);
+                if (spawnLoc != null) {
+                    spawnSheep(spawnLoc, group.iterator().next().getUniqueId()); // Use first player in group as owner
                 }
-
-                // Add 10 blocks to the max distance for spawn radius
-                double spawnRadius = maxDistance + 10;
-
-                // Try to spawn sheep - one for each player in the group
-                for (int i = 0; i < group.size(); i++) {
-                    Location spawnLoc = findSafeSpawnLocation(groupMidpoint, spawnRadius);
-                    if (spawnLoc != null) {
-                        spawnSheep(spawnLoc);
-                    }
-                }
             }
-        }, 0L, 80L); // Spawn every 4 seconds
+        }
+    }
 
-        // Get duration from config (default 45 seconds)
-        int durationSeconds = plugin.getConfigManager().getConfigValue(getName(), "duration");
-        int durationTicks = durationSeconds * 20;
+    @Override
+    public void onEnd(UUID sessionId, Set<Player> players) {
+        isSpawningComplete = true;
 
-        // Schedule spawning end
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            isSpawningComplete = true;
-            if (spawnTask != null) {
-                spawnTask.cancel();
-                spawnTask = null;
+        // Clean up any remaining sheep
+        for (SheepBomb sheepBomb : new HashSet<>(activeSheep)) {
+            sheepBomb.remove();
+        }
+        activeSheep.clear();
+
+        // Clean up shears and give final rewards
+        for (Player player : players) {
+            if (player.isOnline()) {
+                removeShears(player);
+                giveEndRewards(player);
             }
-        }, durationTicks);
+        }
+        givenShears.clear();
 
-        // Start checking for event end
-        checkEndTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            if (isSpawningComplete && activeSheep.isEmpty()) {
-                for (Player player : players) {
-                    if (player.isOnline()) {
-                        removeShears(player);
-                        giveEndRewards(player);
-                    }
-                }
-                stopEvent(false);
-            }
-        }, 20L, 20L);
+        // Re-register event listeners to ensure clean state
+        HandlerList.unregisterAll(this);
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
     private Location findSafeSpawnLocation(Location center, double radius) {
@@ -193,11 +216,12 @@ public class SheepocalypseEvent implements Event, Listener {
         return true;
     }
 
-    private void spawnSheep(Location spawnLoc) {
+    private void spawnSheep(Location spawnLoc, UUID ownerUUID) {
         World world = spawnLoc.getWorld();
         if (world == null) return;
 
-        Sheep sheep = world.spawn(spawnLoc, Sheep.class);
+        // Use EntityManager to spawn and track the sheep
+        Sheep sheep = entityManager.spawnTracked(org.bukkit.entity.EntityType.SHEEP, spawnLoc, "explosive_sheep", ownerUUID);
         sheep.setRemoveWhenFarAway(true);
 
         // Play spawn sounds
@@ -222,12 +246,24 @@ public class SheepocalypseEvent implements Event, Listener {
 
     @EventHandler
     public void onSheepShear(PlayerShearEntityEvent event) {
-        if (!isEventActive || !(event.getEntity() instanceof Sheep)) return;
+        plugin.getLogger().info("[DEBUG] SheepocalypseEvent: Shear event fired, isEventActive=" + isEventActive);
+        
+        if (!isEventActive) {
+            plugin.getLogger().info("[DEBUG] SheepocalypseEvent: Event not active, ignoring");
+            return;
+        }
+        
+        if (!(event.getEntity() instanceof Sheep)) {
+            plugin.getLogger().info("[DEBUG] SheepocalypseEvent: Not a sheep, ignoring");
+            return;
+        }
 
-        event.setCancelled(true); // Prevent regular wool drops
+        event.setCancelled(true); // Cancel vanilla wool drops
         
         Sheep sheep = (Sheep) event.getEntity();
         SheepBomb sheepBomb = null;
+
+        plugin.getLogger().info("[DEBUG] Sheepocalypse: Shearing attempt on sheep " + sheep.getUniqueId());
 
         for (SheepBomb bomb : activeSheep) {
             if (bomb.isSameSheep(sheep)) {
@@ -238,10 +274,10 @@ public class SheepocalypseEvent implements Event, Listener {
 
         if (sheepBomb != null) {
             Player player = event.getPlayer();
+            plugin.getLogger().info("[DEBUG] Sheepocalypse: Found matching SheepBomb, starting shear sequence");
             
             // Cancel any pending explosion tasks immediately
             sheepBomb.cancelExplosion();
-            activeSheep.remove(sheepBomb); // Remove from active sheep BEFORE playing effects
             
             // Drop rewards on ground
             // 30% chance for COMMON reward, 5% chance for RARE
@@ -261,13 +297,20 @@ public class SheepocalypseEvent implements Event, Listener {
             // Play success sound
             SoundHelper.playPlayerSoundSafely(player, "entity.player.levelup", player.getLocation(), 1.0f, 2.0f);
             
-            sheepBomb.playShearAndPoofEffect(); // This will handle the shearing visual and removal after effects
+            // Start the shearing effect sequence
+            plugin.getLogger().info("[DEBUG] Sheepocalypse: Starting shear and poof effect");
+            sheepBomb.playShearAndPoofEffect();
+            
+            // Remove from active sheep AFTER effects start
+            activeSheep.remove(sheepBomb);
+        } else {
+            plugin.getLogger().warning("[DEBUG] Sheepocalypse: No matching SheepBomb found for sheep " + sheep.getUniqueId());
         }
     }
 
     @EventHandler
     public void onSheepDeath(EntityDeathEvent event) {
-        if (!isEventActive || !(event.getEntity() instanceof Sheep)) return;
+        if (!isSpawningComplete || !(event.getEntity() instanceof Sheep)) return;
         
         Sheep sheep = (Sheep) event.getEntity();
 
@@ -299,46 +342,5 @@ public class SheepocalypseEvent implements Event, Listener {
         for (ItemStack reward : rewards) {
             player.getWorld().dropItemNaturally(player.getLocation(), reward);
         }
-    }
-
-    public void stopEvent(boolean giveRewards) {
-        if (!isEventActive) return; // Prevent double cleanup
-        
-        isEventActive = false;
-        isSpawningComplete = true;
-        
-        if (spawnTask != null) {
-            spawnTask.cancel();
-            spawnTask = null;
-        }
-        if (checkEndTask != null) {
-            checkEndTask.cancel();
-            checkEndTask = null;
-        }
-        
-        // Clean up any remaining sheep
-        for (SheepBomb sheepBomb : new HashSet<>(activeSheep)) {
-            sheepBomb.remove();
-        }
-        activeSheep.clear();
-
-        // Clean up any remaining shears and optionally give rewards
-        for (UUID playerId : new ArrayList<>(givenShears.keySet())) {
-            Player player = Bukkit.getPlayer(playerId);
-            if (player != null && player.isOnline()) {
-                removeShears(player);
-                if (giveRewards) {
-                    giveEndRewards(player);
-                }
-            }
-        }
-        givenShears.clear();
-        
-        HandlerList.unregisterAll(this);
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
-    }
-
-    public void stopEvent() {
-        stopEvent(false); // Default to not giving rewards for backward compatibility
     }
 }
