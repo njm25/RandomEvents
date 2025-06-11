@@ -82,13 +82,22 @@ public class SessionRegistry {
         }
         return null;
     }
-    
+
     /**
      * End all active sessions
      */
     public void endAll() {
         // Create a copy to avoid concurrent modification
         new ArrayList<>(activeSessions.values()).forEach(EventSession::end);
+    }
+
+    /**
+     * Force cleanup all participants for all sessions
+     */
+    public void forceCleanupAll() {
+        for (EventSession session : activeSessions.values()) {
+            participants.forEach(p -> p.cleanupSession(session.getSessionId(), true));
+        }
     }
     
     /**

@@ -132,7 +132,7 @@ public abstract class BaseEvent {
     /**
      * @return Whether the event clears its entities when ending
      */
-    public boolean clearEntitiesAtEnd() {
+    public boolean getClearEntitiesAtEnd() {
         return clearEntitiesAtEnd;
     }
 

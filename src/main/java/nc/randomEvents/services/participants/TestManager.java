@@ -21,5 +21,10 @@ public class TestManager implements SessionParticipant {
     public void onSessionEnd(UUID sessionId) {
         plugin.getLogger().info("TestManager onSessionEnd: " + sessionId);
     }
+
+    @Override
+    public void cleanupSession(UUID sessionId, boolean force) {
+        plugin.getLogger().info("TestManager cleaning up session: " + sessionId);
+    }
     
 }

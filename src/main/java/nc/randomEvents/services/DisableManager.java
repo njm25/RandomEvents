@@ -10,6 +10,7 @@ public class DisableManager {
     }
     
     public void disablePlugin() {
+        sessionRegistry.forceCleanupAll();
         sessionRegistry.endAll();
     }
     
