@@ -99,8 +99,8 @@ public class MeteorEvent extends BaseEvent implements Listener {
         int totalMeteorsForSession = totalPlayers * meteorsPerPlayer;
 
         // If we've already spawned all meteors, don't spawn more
-        Integer spawned = totalMeteorsSpawned.get(sessionId);
-        if (spawned != null && spawned >= totalMeteorsForSession) {
+        int spawned = totalMeteorsSpawned.getOrDefault(sessionId, 0);
+        if (spawned >= totalMeteorsForSession) {
             return;
         }
 
