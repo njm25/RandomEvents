@@ -93,7 +93,7 @@ public class ZombieHordeEvent extends BaseEvent {
                     
                     // Current wave cleared
                     giveWaveRewards(player, currentWave);
-                    int totalWaves = plugin.getConfigManager().getConfigValue(getName(), "waves");
+                    int totalWaves = plugin.getConfigManager().getIntValue(getName(), "waves");
                     
                     if (currentWave < totalWaves) {
                         int nextWave = currentWave + 1;
@@ -132,7 +132,7 @@ public class ZombieHordeEvent extends BaseEvent {
         List<Zombie> waveZombies = new ArrayList<>();
         activeZombies.put(player.getUniqueId(), waveZombies);
 
-        int zombiesPerWave = plugin.getConfigManager().getConfigValue(getName(), "zombiesPerWave");
+        int zombiesPerWave = plugin.getConfigManager().getIntValue(getName(), "zombiesPerWave");
         for (int i = 0; i < zombiesPerWave; i++) {
             spawnZombieNearPlayer(player, waveZombies, waveNumber);
         }

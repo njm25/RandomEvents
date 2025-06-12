@@ -423,13 +423,11 @@ public class QuestEvent extends BaseEvent implements Listener {
 
     @Override
     public void onStart(UUID sessionId, Set<Player> players) {
-        // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'onStart'");
     }
 
     @Override
     public void onEnd(UUID sessionId, Set<Player> players) {
-        // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'onEnd'");
     }
 }

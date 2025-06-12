@@ -52,8 +52,24 @@ public class ConfigManager {
     }
 
     public void reload() {
+        FileConfiguration oldConfig = plugin.getConfig();
         loadDefaults();
         plugin.reloadConfig();
+        
+        // Validate critical config sections
+        if (!plugin.getConfig().isConfigurationSection("events")) {
+            logger.severe("Invalid config file! Missing 'events' section!");
+            logger.info("Reverting to previous configuration...");
+            // Save the old config back
+            try {
+                oldConfig.save(configFile);
+                plugin.reloadConfig();
+            } catch (Exception e) {
+                logger.severe("Failed to revert configuration: " + e.getMessage());
+            }
+            return;
+        }
+        
         setDefaults();
     }
 
@@ -117,19 +133,85 @@ public class ConfigManager {
         if (value == null) {
             value = defaultConfig.get(path);
             if (value == null) {
-                logger.warning("No value or default found for " + path);
+                logger.warning(String.format("No value or default found for key '%s' in event '%s'", 
+                                           key, eventName));
                 return null;
             }
+            logger.info(String.format("Using default value for key '%s' in event '%s'", 
+                                    key, eventName));
         }
         
         try {
             return (T) value;
         } catch (ClassCastException e) {
-            logger.warning("Invalid type for config value at " + path);
+            String expectedType = e.getMessage().contains("cannot be cast to") ? 
+                e.getMessage().split("cannot be cast to")[1].trim() : "unknown";
+            String actualType = value != null ? value.getClass().getSimpleName() : "null";
+            logger.warning(String.format("Invalid type for config value at '%s' in event '%s'. Expected: %s, Got: %s", 
+                                       key, eventName, expectedType, actualType));
             return null;
         }
     }
 
+    public Integer getIntValue(String eventName, String key) {
+        String path = "events." + eventName + "." + key;
+        Object value = plugin.getConfig().get(path);
+
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+
+        if (value != null) {
+            logger.warning("Invalid type for config value at " + path + ": expected int but got " + value);
+        }
+
+        // Try default config
+        Object defaultVal = defaultConfig.get(path);
+        if (defaultVal instanceof Number) {
+            return ((Number) defaultVal).intValue();
+        }
+
+        if (defaultVal != null) {
+            logger.warning("Invalid default type at " + path + ": expected int but got " + defaultVal);
+        }
+
+        return null;
+    }
+
+    public Double getDoubleValue(String eventName, String key) {
+        String path = "events." + eventName + "." + key;
+        Object value = plugin.getConfig().get(path);
+
+        if (value instanceof Number) {
+            return ((Number) value).doubleValue();
+        }
+
+        if (value != null) {
+            logger.warning("Invalid type for config value at " + path + ": expected double but got " + value);
+        }
+
+        // Try default config
+        Object defaultVal = defaultConfig.get(path);
+        if (defaultVal instanceof Number) {
+            return ((Number) defaultVal).doubleValue();
+        }
+
+        if (defaultVal != null) {
+            logger.warning("Invalid default type at " + path + ": expected double but got " + defaultVal);
+        }
+
+        return null;
+    }
+
+    public Integer getIntValue(BaseEvent event, String key) {
+        return getIntValue(event.getName(), key);
+    }
+
+    public Double getDoubleValue(BaseEvent event, String key) {
+        return getDoubleValue(event.getName(), key);
+    }
+
+    // Keep the generic method for non-numeric types
     public <T> T getConfigValue(BaseEvent event, String key) {
         return getConfigValue(event.getName(), key);
     }
@@ -144,6 +226,33 @@ public class ConfigManager {
         }
         
         return eventSection;
+    }
+    
+    public Boolean getBooleanValue(String eventName, String key) {
+        String path = "events." + eventName + "." + key;
+        Object value = plugin.getConfig().get(path);
+
+        if (value instanceof Boolean) {
+            return (Boolean) value;
+        }
+
+        if (value != null) {
+            logger.warning(String.format("Invalid type for config value at '%s' in event '%s': expected boolean but got %s", 
+                                       key, eventName, value.getClass().getSimpleName()));
+        }
+
+        // Try default config
+        Object defaultVal = defaultConfig.get(path);
+        if (defaultVal instanceof Boolean) {
+            return (Boolean) defaultVal;
+        }
+
+        if (defaultVal != null) {
+            logger.warning(String.format("Invalid default type at '%s' in event '%s': expected boolean but got %s", 
+                                       key, eventName, defaultVal.getClass().getSimpleName()));
+        }
+
+        return null;
     }
 
 }

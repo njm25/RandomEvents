@@ -95,7 +95,8 @@ public class MeteorEvent extends BaseEvent implements Listener {
 
         // Get total meteors that should be spawned for this session
         int totalPlayers = players.size();
-        int meteorsPerPlayer = plugin.getConfigManager().getConfigValue(getName(), "amountPerPlayer");
+        int meteorsPerPlayer = plugin.getConfigManager().getIntValue(getName(), "amountPerPlayer");
+        meteorsPerPlayer = Math.max(0, Math.min(10000, meteorsPerPlayer));
         int totalMeteorsForSession = totalPlayers * meteorsPerPlayer;
 
         // If we've already spawned all meteors, don't spawn more
@@ -140,12 +141,13 @@ public class MeteorEvent extends BaseEvent implements Listener {
         }
 
         // Check if we've reached the spawn limit
-        int maxEnemySpawns = plugin.getConfigManager().getConfigValue(getName(), "maxEnemySpawns");
+        int maxEnemySpawns = plugin.getConfigManager().getIntValue(getName(), "maxEnemySpawns");
+        maxEnemySpawns = Math.max(0, maxEnemySpawns);
         if (spawnedEnemyCount >= maxEnemySpawns) {
             return; // Skip enemy spawn chance roll entirely
         }
 
-        double enemySpawnChance = plugin.getConfigManager().getConfigValue(getName(), "enemySpawnChance");
+        double enemySpawnChance = plugin.getConfigManager().getDoubleValue(getName(), "enemySpawnChance");
         enemySpawnChance = Math.max(0.0, Math.min(1.0, enemySpawnChance));
         
         EntityManager entityManager = plugin.getEntityManager();
@@ -250,7 +252,8 @@ public class MeteorEvent extends BaseEvent implements Listener {
         World world = targetLoc.getWorld();
         if (world == null) return;
         
-        int radius = plugin.getConfigManager().getConfigValue(getName(), "radius");
+        int radius = plugin.getConfigManager().getIntValue(getName(), "radius");
+        radius = Math.max(1, Math.min(1000, radius));
         double offsetX = (random.nextDouble() - 0.5) * radius;
         double offsetZ = (random.nextDouble() - 0.5) * radius;
         double spawnY = 256;
@@ -342,7 +345,7 @@ public class MeteorEvent extends BaseEvent implements Listener {
             }
 
             // Handle loot drops
-            double lootChance = plugin.getConfigManager().getConfigValue(getName(), "lootChance");
+            double lootChance = plugin.getConfigManager().getDoubleValue(getName(), "lootChance");
             lootChance = Math.max(0.0, Math.min(1.0, lootChance));
             
             if (random.nextDouble() < lootChance) {
