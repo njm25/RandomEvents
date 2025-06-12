@@ -71,11 +71,7 @@ public class EntityManager implements Listener, SessionParticipant {
     @Override
     public void onSessionEnd(UUID sessionId) {
         plugin.getLogger().info("EntityManager cleaning up session: " + sessionId);
-        EventSession session = sessionRegistry.getSession(sessionId);
-        // Only clean up entities if the session exists and the event wants them cleaned up
-        if (session != null && session.getEvent().clearEntitiesAtEnd()) {
-            cleanupSession(sessionId);
-        }
+        cleanupSession(sessionId, false);
     }
 
     /**
@@ -131,7 +127,18 @@ public class EntityManager implements Listener, SessionParticipant {
      * Cleans up all entities for a specific session
      * @param sessionId The session ID to clean up
      */
-    private void cleanupSession(UUID sessionId) {
+    @Override
+    public void cleanupSession(UUID sessionId, boolean force) {
+
+        EventSession session = sessionRegistry.getSession(sessionId);
+        // Only clean up entities if the session exists and the event wants them cleaned up
+        if (!force) {
+            boolean clearEntitiesAtEnd = session != null && session.getEvent().getClearEntitiesAtEnd();
+            if (!clearEntitiesAtEnd) {
+                return;
+            }
+        }
+
         Set<UUID> entities = sessionEntities.remove(sessionId);
         if (entities != null) {
             for (World world : plugin.getServer().getWorlds()) {

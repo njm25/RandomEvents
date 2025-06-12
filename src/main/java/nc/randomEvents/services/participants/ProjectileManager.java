@@ -1,7 +1,6 @@
 package nc.randomEvents.services.participants;
 
-import nc.randomEvents.RandomEvents;
-import nc.randomEvents.core.EventSession;
+import nc.randomEvents.RandomEvents;    
 import nc.randomEvents.core.SessionParticipant;
 import nc.randomEvents.services.SessionRegistry;
 import nc.randomEvents.utils.PersistentDataHelper;
@@ -78,15 +77,17 @@ public class ProjectileManager implements Listener, SessionParticipant {
     @Override
     public void onSessionEnd(UUID sessionId) {
         plugin.getLogger().info("ProjectileManager cleaning up session: " + sessionId);
-        EventSession session = sessionRegistry.getSession(sessionId);
-        // Get cleanup flag before session might be unregistered
-        boolean shouldCleanup = session.getEvent().clearProjectilesAtEnd();
-        if (shouldCleanup) {
-            cleanupSession(sessionId);
-        }
+        cleanupSession(sessionId, false);
     }
 
-    private void cleanupSession(UUID sessionId) {
+    @Override
+    public void cleanupSession(UUID sessionId, boolean force) {
+        if (!force) {
+            boolean clearProjectilesAtEnd = sessionRegistry.getSession(sessionId).getEvent().clearProjectilesAtEnd();
+            if (!clearProjectilesAtEnd) {
+                return;
+            }
+        }
         Set<UUID> projectiles = sessionProjectiles.get(sessionId);
         if (projectiles != null) {
             for (World world : plugin.getServer().getWorlds()) {

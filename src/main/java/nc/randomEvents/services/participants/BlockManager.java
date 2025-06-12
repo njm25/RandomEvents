@@ -33,6 +33,11 @@ public class BlockManager implements SessionParticipant, Listener {
         plugin.getLogger().info("BlockManager tracking session end: " + sessionId);
     }
 
+    @Override
+    public void cleanupSession(UUID sessionId, boolean force) {
+        plugin.getLogger().info("BlockManager cleaning up session: " + sessionId);
+    }
+
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();

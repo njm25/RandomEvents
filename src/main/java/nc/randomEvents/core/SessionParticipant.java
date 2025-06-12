@@ -2,7 +2,7 @@ package nc.randomEvents.core;
 
 import java.util.UUID;
 
-public interface SessionParticipant {
+public interface SessionParticipant { 
     /**
      * Called when a new event session begins
      * @param sessionId The unique identifier for this session
@@ -14,4 +14,10 @@ public interface SessionParticipant {
      * @param sessionId The unique identifier for the ending session
      */
     void onSessionEnd(UUID sessionId);
+
+    /**
+     * Called when a session is forcefully ended
+     * @param sessionId The unique identifier for the ending session
+     */
+    void cleanupSession(UUID sessionId, boolean force);
 }

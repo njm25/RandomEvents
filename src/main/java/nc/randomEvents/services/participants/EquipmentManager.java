@@ -1,7 +1,6 @@
 package nc.randomEvents.services.participants;
 
 import nc.randomEvents.RandomEvents;
-import nc.randomEvents.core.EventSession;
 import nc.randomEvents.core.SessionParticipant;
 import nc.randomEvents.services.SessionRegistry;
 import nc.randomEvents.utils.ItemHelper;
@@ -193,14 +192,8 @@ public class EquipmentManager implements Listener, SessionParticipant {
     @Override
     public void onSessionEnd(UUID sessionId) {
         plugin.getLogger().info("EquipmentManager cleaning up session: " + sessionId);
-
         boolean hasStrippedInventory = this.strippedInventories.containsKey(sessionId);
-        EventSession session = sessionRegistry.getSession(sessionId);
-        
-        // Only clean up equipment if the session exists and the event wants them cleaned up
-        if (session != null && session.getEvent().clearEquipmentAtEnd()) {
-            cleanupSession(sessionId);
-        }
+        cleanupSession(sessionId, false);
 
         // Always restore stripped inventories regardless of clearEquipmentAtEnd flag
         if (hasStrippedInventory) {
@@ -282,7 +275,14 @@ public class EquipmentManager implements Listener, SessionParticipant {
      * Cleans up all equipment for a specific session
      * @param sessionId The session ID to clean up
      */
-    private void cleanupSession(UUID sessionId) {
+    @Override
+    public void cleanupSession(UUID sessionId, boolean force) {
+        if (!force) {
+            boolean clearEquipmentAtEnd = sessionRegistry.getSession(sessionId).getEvent().clearEquipmentAtEnd();
+            if (!clearEquipmentAtEnd) {
+                return;
+            }
+        }
         // Clean up items in player inventories
         for (Player player : plugin.getServer().getOnlinePlayers()) {
             cleanupPlayerInventory(player, sessionId);
