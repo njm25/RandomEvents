@@ -52,8 +52,24 @@ public class ConfigManager {
     }
 
     public void reload() {
+        FileConfiguration oldConfig = plugin.getConfig();
         loadDefaults();
         plugin.reloadConfig();
+        
+        // Validate critical config sections
+        if (!plugin.getConfig().isConfigurationSection("events")) {
+            logger.severe("Invalid config file! Missing 'events' section!");
+            logger.info("Reverting to previous configuration...");
+            // Save the old config back
+            try {
+                oldConfig.save(configFile);
+                plugin.reloadConfig();
+            } catch (Exception e) {
+                logger.severe("Failed to revert configuration: " + e.getMessage());
+            }
+            return;
+        }
+        
         setDefaults();
     }
 
@@ -117,15 +133,22 @@ public class ConfigManager {
         if (value == null) {
             value = defaultConfig.get(path);
             if (value == null) {
-                logger.warning("No value or default found for " + path);
+                logger.warning(String.format("No value or default found for key '%s' in event '%s'", 
+                                           key, eventName));
                 return null;
             }
+            logger.info(String.format("Using default value for key '%s' in event '%s'", 
+                                    key, eventName));
         }
         
         try {
             return (T) value;
         } catch (ClassCastException e) {
-            logger.warning("Invalid type for config value at " + path);
+            String expectedType = e.getMessage().contains("cannot be cast to") ? 
+                e.getMessage().split("cannot be cast to")[1].trim() : "unknown";
+            String actualType = value != null ? value.getClass().getSimpleName() : "null";
+            logger.warning(String.format("Invalid type for config value at '%s' in event '%s'. Expected: %s, Got: %s", 
+                                       key, eventName, expectedType, actualType));
             return null;
         }
     }
