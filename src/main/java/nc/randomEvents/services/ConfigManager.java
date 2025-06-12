@@ -227,5 +227,32 @@ public class ConfigManager {
         
         return eventSection;
     }
+    
+    public Boolean getBooleanValue(String eventName, String key) {
+        String path = "events." + eventName + "." + key;
+        Object value = plugin.getConfig().get(path);
+
+        if (value instanceof Boolean) {
+            return (Boolean) value;
+        }
+
+        if (value != null) {
+            logger.warning(String.format("Invalid type for config value at '%s' in event '%s': expected boolean but got %s", 
+                                       key, eventName, value.getClass().getSimpleName()));
+        }
+
+        // Try default config
+        Object defaultVal = defaultConfig.get(path);
+        if (defaultVal instanceof Boolean) {
+            return (Boolean) defaultVal;
+        }
+
+        if (defaultVal != null) {
+            logger.warning(String.format("Invalid default type at '%s' in event '%s': expected boolean but got %s", 
+                                       key, eventName, defaultVal.getClass().getSimpleName()));
+        }
+
+        return null;
+    }
 
 }
