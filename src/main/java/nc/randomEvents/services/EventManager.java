@@ -8,6 +8,7 @@ import nc.randomEvents.events.tests.BaseEventTest;
 import nc.randomEvents.events.tests.EntityManagerTest;
 import nc.randomEvents.events.tests.EquipmentManagerTest;
 import nc.randomEvents.events.tests.ItemHelperTest;
+import nc.randomEvents.events.tests.ContainerManagerTest;
 import nc.randomEvents.events.LootGoblin.LootGoblinEvent;
 import nc.randomEvents.events.Sheepocalypse.SheepocalypseEvent;
 import nc.randomEvents.events.Meteor.MeteorEvent;
@@ -42,6 +43,7 @@ public class EventManager {
         addEvent(new ZombieHordeEvent(plugin));
         addEvent(new SheepocalypseEvent(plugin));
         addEvent(new MeteorEvent(plugin));
+        addEvent(new ContainerManagerTest(plugin));
     }
 
     public void addEvent(BaseEvent event) {
