@@ -9,6 +9,7 @@ import nc.randomEvents.services.participants.EquipmentManager;
 import nc.randomEvents.services.participants.ProjectileManager;
 import nc.randomEvents.services.participants.TestManager;
 import nc.randomEvents.utils.Metrics;
+import nc.randomEvents.services.participants.ContainerManager;
 
 public final class RandomEvents extends JavaPlugin {
 
@@ -26,6 +27,7 @@ public final class RandomEvents extends JavaPlugin {
     private BlockManager blockManager;
     private EntityManager entityManager;
     private ProjectileManager projectileManager;
+    private ContainerManager containerManager;
 
     @Override
     public void onEnable() {
@@ -104,6 +106,10 @@ public final class RandomEvents extends JavaPlugin {
         this.projectileManager = projectileManager;
     }
 
+    void setContainerManager(ContainerManager containerManager) {
+        this.containerManager = containerManager;
+    }
+
     // #endregion Setters
 
     // #region Getters
@@ -158,6 +164,10 @@ public final class RandomEvents extends JavaPlugin {
 
     public ProjectileManager getProjectileManager() {
         return projectileManager;
+    }
+
+    public ContainerManager getContainerManager() {
+        return containerManager;
     }
 
     // #endregion Getters
