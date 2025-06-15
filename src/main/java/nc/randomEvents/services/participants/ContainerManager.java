@@ -24,6 +24,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.event.inventory.ClickType;
 
 import java.util.*;
 
@@ -212,34 +213,77 @@ public class ContainerManager implements Listener, SessionParticipant {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player)) return;
+        plugin.getLogger().info("=== Inventory Click Event Start ===");
+        plugin.getLogger().info("Event Type: " + event.getClass().getSimpleName());
         
+        if (!(event.getWhoClicked() instanceof Player)) {
+            plugin.getLogger().info("Not a player click, returning");
+            return;
+        }
+        
+        Player player = (Player) event.getWhoClicked();
         Inventory clickedInventory = event.getClickedInventory();
-        if (clickedInventory == null) return;
+        Inventory topInventory = event.getView().getTopInventory();
         
-        // Check if this is a container inventory
-        if (clickedInventory.getHolder() instanceof Container) {
-            Container container = (Container) clickedInventory.getHolder();
+        // Check if the top inventory is a container
+        if (topInventory.getHolder() instanceof Container) {
+            Container container = (Container) topInventory.getHolder();
             Block block = container.getBlock();
             
             if (isEventContainer(block)) {
-                // Only allow taking items out
-                if (event.getAction().name().contains("PLACE") || 
-                    event.getAction().name().contains("SWAP") ||
-                    event.getAction().name().contains("MOVE_TO_OTHER_INVENTORY")) {
-                    event.setCancelled(true);
+                plugin.getLogger().info("Is an event container");
+                
+                // Handle shift-clicking
+                if (event.isShiftClick()) {
+                    plugin.getLogger().info("=== Shift Click Debug ===");
+                    plugin.getLogger().info("Clicked Inventory: " + clickedInventory.getType());
+                    
+                    // If clicking in player inventory, block shift-click to container
+                    if (clickedInventory == player.getInventory()) {
+                        plugin.getLogger().info("Cancelling shift-click from player inventory to container");
+                        event.setCancelled(true);
+                        return;
+                    }
+                    
+                    // If clicking in container, allow shift-click to player inventory
+                    if (clickedInventory == topInventory) {
+                        plugin.getLogger().info("Allowing shift-click from container to player inventory");
+                        return;
+                    }
                 }
                 
-                // Check if container is empty after this click
-                if (event.getAction().name().contains("PICKUP")) {
-                    Bukkit.getScheduler().runTask(plugin, () -> {
-                        if (clickedInventory.isEmpty()) {
-                            block.setType(Material.AIR);
-                        }
-                    });
+                // If clicking in the container
+                if (clickedInventory == topInventory) {
+                    plugin.getLogger().info("=== Container Click Debug ===");
+                    // Allow taking items out
+                    if (event.getAction().name().contains("PICKUP")) {
+                        plugin.getLogger().info("Allowing item pickup from container");
+                        // Check if container is empty after this click
+                        Bukkit.getScheduler().runTask(plugin, () -> {
+                            if (topInventory.isEmpty()) {
+                                plugin.getLogger().info("Container is empty, removing block");
+                                block.setType(Material.AIR);
+                            }
+                        });
+                        return;
+                    }
+                    
+                    plugin.getLogger().info("Cancelling other container actions");
+                    // Cancel all other actions in the container
+                    event.setCancelled(true);
+                    return;
+                }
+                
+                // If clicking in player inventory
+                if (clickedInventory == player.getInventory()) {
+                    plugin.getLogger().info("=== Player Inventory Click Debug ===");
+                    // Allow all actions in player inventory
+                    return;
                 }
             }
         }
+        
+        plugin.getLogger().info("=== Inventory Click Event End ===");
     }
 
     @EventHandler
@@ -252,7 +296,7 @@ public class ContainerManager implements Listener, SessionParticipant {
             Block block = container.getBlock();
             
             if (isEventContainer(block)) {
-                // Cancel any drag that would place items in the container
+                // Check if any of the slots being dragged to are in the container
                 for (int slot : event.getRawSlots()) {
                     if (slot < topInventory.getSize()) {
                         event.setCancelled(true);
