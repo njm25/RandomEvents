@@ -10,10 +10,14 @@ import nc.randomEvents.utils.PersistentDataHelper;
 import nc.randomEvents.utils.SoundHelper;
 import org.bukkit.*;
 import org.bukkit.block.*;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -29,8 +33,11 @@ public class ContainerManager implements Listener, SessionParticipant {
     private static final String CONTAINER_ID_KEY = "container_id";
     private static final String CONTAINER_SESSION_KEY = "container_session";
     private static final String CONTAINER_TYPE_KEY = "container_type";
+    private static final String QUEST_ITEM_KEY = "quest_item";
+    private static final String QUEST_ITEM_SESSION_KEY = "quest_item_session";
     private final SessionRegistry sessionRegistry;
     private final Map<UUID, Set<Location>> sessionContainers = new HashMap<>();
+    private final Map<UUID, Set<Location>> sessionQuestItems = new HashMap<>();
 
     public enum ContainerType {
         INSTANT_REWARD,
@@ -53,10 +60,11 @@ public class ContainerManager implements Listener, SessionParticipant {
      * @param sessionId The event session this container belongs to
      * @param containerMaterial The material type for the container (defaults to CHEST if null)
      * @param initialItems Optional list of items to add to the container
+     * @param isQuestItem Whether the items should be marked as quest items (will be cleared on session end)
      * @return The created container block state, or null if creation failed
      */
     public Container createContainer(Location location, ContainerType type, String containerId, UUID sessionId, 
-                                   Material containerMaterial, List<ItemStack> initialItems) {
+                                   Material containerMaterial, List<ItemStack> initialItems, boolean isQuestItem) {
         Block block = location.getBlock();
         block.setType(containerMaterial != null ? containerMaterial : Material.CHEST);
         
@@ -80,7 +88,16 @@ public class ContainerManager implements Listener, SessionParticipant {
 
         // Add initial items if provided
         if (initialItems != null && !initialItems.isEmpty()) {
-            container.getInventory().addItem(initialItems.toArray(new ItemStack[0]));
+            for (ItemStack item : initialItems) {
+                if (isQuestItem) {
+                    // Mark item as quest item
+                    PersistentDataHelper.set(item.getItemMeta().getPersistentDataContainer(), plugin, QUEST_ITEM_KEY, 
+                                           PersistentDataType.BYTE, (byte) 1);
+                    PersistentDataHelper.set(item.getItemMeta().getPersistentDataContainer(), plugin, QUEST_ITEM_SESSION_KEY, 
+                                           PersistentDataType.STRING, sessionId.toString());
+                }
+                container.getInventory().addItem(item);
+            }
         }
 
         // Track the container
@@ -96,11 +113,12 @@ public class ContainerManager implements Listener, SessionParticipant {
      * @param containerId Unique identifier for this container
      * @param sessionId The event session this container belongs to
      * @param initialItems Optional list of items to add to the container
+     * @param isQuestItem Whether the items should be marked as quest items (will be cleared on session end)
      * @return The created container block state, or null if creation failed
      */
     public Container createContainer(Location location, ContainerType type, String containerId, UUID sessionId, 
-                                   List<ItemStack> initialItems) {
-        return createContainer(location, type, containerId, sessionId, null, initialItems);
+                                   List<ItemStack> initialItems, boolean isQuestItem) {
+        return createContainer(location, type, containerId, sessionId, null, initialItems, isQuestItem);
     }
 
     /**
@@ -184,13 +202,65 @@ public class ContainerManager implements Listener, SessionParticipant {
         ContainerType type = getContainerType(block);
         if (type == null) return;
         
-        event.setCancelled(true);
-        
         if (type == ContainerType.INSTANT_REWARD) {
+            event.setCancelled(true);
             handleInstantRewardContainer(event.getPlayer(), block);
         }
         // For REGULAR containers, we don't need to do anything special
         // They will behave like normal containers
+    }
+
+    @EventHandler
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player)) return;
+        
+        Inventory clickedInventory = event.getClickedInventory();
+        if (clickedInventory == null) return;
+        
+        // Check if this is a container inventory
+        if (clickedInventory.getHolder() instanceof Container) {
+            Container container = (Container) clickedInventory.getHolder();
+            Block block = container.getBlock();
+            
+            if (isEventContainer(block)) {
+                // Only allow taking items out
+                if (event.getAction().name().contains("PLACE") || 
+                    event.getAction().name().contains("SWAP") ||
+                    event.getAction().name().contains("MOVE_TO_OTHER_INVENTORY")) {
+                    event.setCancelled(true);
+                }
+                
+                // Check if container is empty after this click
+                if (event.getAction().name().contains("PICKUP")) {
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        if (clickedInventory.isEmpty()) {
+                            block.setType(Material.AIR);
+                        }
+                    });
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onInventoryDrag(InventoryDragEvent event) {
+        if (!(event.getWhoClicked() instanceof Player)) return;
+        
+        Inventory topInventory = event.getView().getTopInventory();
+        if (topInventory.getHolder() instanceof Container) {
+            Container container = (Container) topInventory.getHolder();
+            Block block = container.getBlock();
+            
+            if (isEventContainer(block)) {
+                // Cancel any drag that would place items in the container
+                for (int slot : event.getRawSlots()) {
+                    if (slot < topInventory.getSize()) {
+                        event.setCancelled(true);
+                        return;
+                    }
+                }
+            }
+        }
     }
 
     private void handleInstantRewardContainer(Player player, Block block) {
@@ -260,17 +330,30 @@ public class ContainerManager implements Listener, SessionParticipant {
 
     @Override
     public void cleanupSession(UUID sessionId, boolean force) {
+        // Clean up containers
         Set<Location> containers = sessionContainers.remove(sessionId);
-        if (containers == null) return;
+        if (containers != null) {
+            for (Location loc : containers) {
+                Block block = loc.getBlock();
+                if (block.getState() instanceof Container) {
+                    Container container = (Container) block.getState();
+                    // Clear the container's inventory
+                    container.getInventory().clear();
+                    // Remove the container
+                    block.setType(Material.AIR);
+                }
+            }
+        }
 
-        for (Location loc : containers) {
-            Block block = loc.getBlock();
-            if (block.getState() instanceof Container) {
-                Container container = (Container) block.getState();
-                // Clear the container's inventory
-                container.getInventory().clear();
-                // Remove the container
-                block.setType(Material.AIR);
+        // Clean up quest items
+        Set<Location> questItems = sessionQuestItems.remove(sessionId);
+        if (questItems != null) {
+            for (Location loc : questItems) {
+                Block block = loc.getBlock();
+                if (block.getState() instanceof Container) {
+                    Container container = (Container) block.getState();
+                    container.getInventory().clear();
+                }
             }
         }
     }
