@@ -10,8 +10,6 @@ import nc.randomEvents.utils.PersistentDataHelper;
 import nc.randomEvents.utils.SoundHelper;
 import org.bukkit.*;
 import org.bukkit.block.*;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -24,7 +22,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.event.inventory.ClickType;
 
 import java.util.*;
 
