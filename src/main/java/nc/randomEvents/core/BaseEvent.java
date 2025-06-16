@@ -14,6 +14,7 @@ public abstract class BaseEvent {
     private boolean clearEntitiesAtEnd = true; // Default clear entities at end
     private boolean clearEquipmentAtEnd = true; // Default clear equipment at end
     private boolean clearProjectilesAtEnd = true; // Default clear projectiles at end
+    private boolean clearContainerAtEndDefault = false; // Default don't clear containers at end
     
     /**
      * Called when the event session starts
@@ -169,5 +170,19 @@ public abstract class BaseEvent {
      */
     public void setClearProjectilesAtEnd(boolean clearProjectilesAtEnd) {
         this.clearProjectilesAtEnd = clearProjectilesAtEnd;
+    }
+
+    /**
+     * @return Whether containers should be cleared by default when the event ends
+     */
+    public boolean getClearContainerAtEndDefault() {
+        return clearContainerAtEndDefault;
+    }
+
+    /**
+     * @param clearContainerAtEndDefault Whether containers should be cleared by default when the event ends
+     */
+    protected void setClearContainerAtEndDefault(boolean clearContainerAtEndDefault) {
+        this.clearContainerAtEndDefault = clearContainerAtEndDefault;
     }
 }
