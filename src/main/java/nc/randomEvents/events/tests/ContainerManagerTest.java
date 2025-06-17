@@ -2,8 +2,8 @@ package nc.randomEvents.events.tests;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.core.BaseEvent;
-import nc.randomEvents.services.participants.ContainerManager;
-import nc.randomEvents.services.participants.ContainerManager.ContainerType;
+import nc.randomEvents.services.participants.container.ContainerManager;
+import nc.randomEvents.services.participants.container.ContainerData.ContainerType;
 import nc.randomEvents.services.RewardGenerator.Tier;
 import org.bukkit.*;
 import org.bukkit.block.Block;

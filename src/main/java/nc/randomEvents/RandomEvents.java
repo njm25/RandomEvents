@@ -9,7 +9,7 @@ import nc.randomEvents.services.participants.EquipmentManager;
 import nc.randomEvents.services.participants.ProjectileManager;
 import nc.randomEvents.services.participants.TestManager;
 import nc.randomEvents.utils.Metrics;
-import nc.randomEvents.services.participants.ContainerManager;
+import nc.randomEvents.services.participants.container.ContainerManager;
 
 public final class RandomEvents extends JavaPlugin {
 
