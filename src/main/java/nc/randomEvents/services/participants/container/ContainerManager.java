@@ -241,4 +241,16 @@ public class ContainerManager implements SessionParticipant {
     public void saveAllContainers() {
         persistence.saveContainers();
     }
+
+    public void onContainerRemoved(Location location) {
+        // Remove the container from the registry
+        registry.unregisterContainer(location);
+        
+        // Save the updated container data
+        persistence.saveContainers();
+    }
+
+    public ContainerRegistry getRegistry() {
+        return registry;
+    }
 } 
