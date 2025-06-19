@@ -12,6 +12,8 @@ import nc.randomEvents.events.tests.ContainerManagerTest;
 import nc.randomEvents.events.LootGoblin.LootGoblinEvent;
 import nc.randomEvents.events.Sheepocalypse.SheepocalypseEvent;
 import nc.randomEvents.events.Meteor.MeteorEvent;
+import nc.randomEvents.events.Quest.QuestEvent;
+
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -44,6 +46,7 @@ public class EventManager {
         addEvent(new SheepocalypseEvent(plugin));
         addEvent(new MeteorEvent(plugin));
         addEvent(new ContainerManagerTest(plugin));
+        addEvent(new QuestEvent(plugin));
     }
 
     public void addEvent(BaseEvent event) {
