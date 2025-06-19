@@ -2,9 +2,10 @@ package nc.randomEvents.events.Quest;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.core.BaseEvent;
-import nc.randomEvents.services.RewardGenerator;
 import nc.randomEvents.services.RewardGenerator.Tier;
-import nc.randomEvents.services.RewardGenerator.TierQuantity;
+import nc.randomEvents.services.participants.container.ContainerManager;
+import nc.randomEvents.services.participants.container.ContainerData.ContainerType;
+import nc.randomEvents.services.participants.EquipmentManager;
 import nc.randomEvents.utils.LocationHelper;
 import nc.randomEvents.utils.SoundHelper;
 import net.kyori.adventure.text.Component;
@@ -12,7 +13,6 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.Particle;
 import org.bukkit.block.Block;
-import org.bukkit.block.Chest;
 import org.bukkit.block.Container;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -37,15 +37,30 @@ public class QuestEvent extends BaseEvent implements Listener {
     private final RandomEvents plugin;
     private final Set<QuestSession> activeSessions;
     private final Random random;
-    private boolean eventActive;
+    private final EquipmentManager equipmentManager;
+    private final ContainerManager containerManager;
 
     public QuestEvent(RandomEvents plugin) {
         this.plugin = plugin;
         this.activeSessions = new HashSet<>();
         this.random = new Random();
+        this.equipmentManager = plugin.getEquipmentManager();
+        this.containerManager = plugin.getContainerManager();
+        
+        // Register event listeners
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+        
+        // Configure event settings
+        setTickInterval(0); // No ticking needed
+        setDuration(0); // No fixed duration
+        setStripsInventory(false);
+        setCanBreakBlocks(true);
+        setCanPlaceBlocks(true);
+        setMaxPlayers(0); // No max players
     }
 
-    public void execute(Set<Player> players) {
+    @Override
+    public void onStart(UUID sessionId, Set<Player> players) {
         if (players == null || players.isEmpty()) {
             plugin.getLogger().warning("QuestEvent cannot start: No players provided.");
             return;
@@ -61,7 +76,6 @@ public class QuestEvent extends BaseEvent implements Listener {
             return;
         }
 
-        eventActive = true;
         activeSessions.clear();
 
         // Group overworld players
@@ -120,16 +134,20 @@ public class QuestEvent extends BaseEvent implements Listener {
             if (targetLocation != null) {
                 Location chestLocation = findSuitableLocation(targetLocation);
                 if (chestLocation != null) {
+                    // Generate rewards for this session
+                    Map<Tier, Integer> tierQuantities = new HashMap<>();
+                    tierQuantities.put(Tier.RARE, 2);
+                    tierQuantities.put(Tier.COMMON, 4);
+                    
                     // Create new session for this group
                     QuestSession session = new QuestSession(group, chestLocation);
                     activeSessions.add(session);
 
-                    // Place chest
-                    Block chestBlock = chestLocation.getBlock();
-                    chestBlock.setType(Material.CHEST);
+                    // Create container using ContainerManager with rewards
+                    containerManager.createContainer(chestLocation, ContainerType.INSTANT_REWARD, "quest_chest", sessionId, Material.CHEST, null, null, tierQuantities, true);
                     
-                    // Distribute books to group members
-                    distributeQuestBooks(group, chestLocation);
+                    // Distribute books to group members using EquipmentManager
+                    distributeQuestBooks(group, chestLocation, sessionId);
 
                     String chestCoordsString = String.format("X: %d, Y: %d, Z: %d", 
                         chestLocation.getBlockX(), 
@@ -144,11 +162,24 @@ public class QuestEvent extends BaseEvent implements Listener {
         if (activeSessions.isEmpty()) {
             plugin.getLogger().severe("QuestEvent: Could not create any valid sessions. Aborting event.");
             Bukkit.broadcast(Component.text("[RandomEvent] Quest Event failed: The server couldn't find suitable spots for treasure chests.", NamedTextColor.RED));
-            eventActive = false;
             return;
         }
+    }
 
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+    @Override
+    public void onTick(UUID sessionId, Set<Player> players) {
+        // No periodic tasks needed
+    }
+
+
+    @Override
+    public void onEnd(UUID sessionId, Set<Player> players) {
+        // Clean up all sessions
+        for (QuestSession session : activeSessions) {
+            cleanupSession(session);
+        }
+        activeSessions.clear();
+        HandlerList.unregisterAll(this);
     }
 
     private Location findSuitableLocation(Location targetLocation) {
@@ -198,7 +229,6 @@ public class QuestEvent extends BaseEvent implements Listener {
             Block blockAboveChest = world.getBlockAt(x, chestY + 1, z);
             
             // Check if the prospective ground is solid, and the chest and above-chest locations are air
-            // No need for isWaterlogged check on prospectiveGroundBlock if we are placing chest in AIR above it.
             if (prospectiveGroundBlock.getType().isSolid() && 
                 blockAtChest.getType() == Material.AIR && 
                 blockAboveChest.getType() == Material.AIR) {
@@ -209,15 +239,15 @@ public class QuestEvent extends BaseEvent implements Listener {
         return null;
     }
 
-    private void distributeQuestBooks(Set<Player> players, Location chestLocation) {
+    private void distributeQuestBooks(Set<Player> players, Location chestLocation, UUID sessionId) {
         for (Player player : players) {
             if (player.isOnline()) {
-                giveQuestBook(player, chestLocation);
+                giveQuestBook(player, chestLocation, sessionId);
             }
         }
     }
 
-    private void giveQuestBook(Player player, Location chestLocation) {
+    private void giveQuestBook(Player player, Location chestLocation, UUID sessionId) {
         ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
         BookMeta bookMeta = (BookMeta) book.getItemMeta();
         if (bookMeta != null) {
@@ -244,7 +274,8 @@ public class QuestEvent extends BaseEvent implements Listener {
             bookMeta.addPages(Component.text(bookText, NamedTextColor.BLACK));
             book.setItemMeta(bookMeta);
             
-            player.getInventory().addItem(book);
+            // Use EquipmentManager to give the book
+            equipmentManager.giveEquipment(player, book, "quest_book", sessionId);
             player.sendMessage(Component.text("[Event] You have received an Ancient Scroll! Check your inventory.", NamedTextColor.GOLD));
             
             // Play mysterious sounds
@@ -255,29 +286,31 @@ public class QuestEvent extends BaseEvent implements Listener {
 
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
-        if (!eventActive) return;
-        
-        // We care about left or right clicking a block
         if (event.getAction() != Action.LEFT_CLICK_BLOCK && event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
         if (event.getClickedBlock() == null) return;
 
         Block clickedBlock = event.getClickedBlock();
         Player player = event.getPlayer();
-        
-        // Find the session this player belongs to
-        Optional<QuestSession> playerSession = activeSessions.stream()
-            .filter(session -> session.isActive() && session.hasPlayer(player.getUniqueId()))
+
+        // Find the session whose chest is at this location
+        Optional<QuestSession> chestSession = activeSessions.stream()
+            .filter(session -> session.isActive() && clickedBlock.getLocation().equals(session.getChestLocation()))
             .findFirst();
 
-        if (!playerSession.isPresent()) return;
+        if (!chestSession.isPresent()) return;
 
-        QuestSession session = playerSession.get();
-        Location sessionChestLoc = session.getChestLocation();
-        
-        // Compare block locations
-        if (clickedBlock.getLocation().equals(sessionChestLoc) && clickedBlock.getType() == Material.CHEST) {
+        QuestSession session = chestSession.get();
+        // Check if player is part of this session
+        if (!session.hasPlayer(player.getUniqueId())) {
+            player.sendMessage(Component.text("[Event] You are not in the quest group for this chest!", NamedTextColor.RED));
             event.setCancelled(true);
-            
+            return;
+        }
+
+        // Compare block locations
+        if (clickedBlock.getType() == Material.CHEST) {
+            event.setCancelled(true);
+
             // Broadcast only to players in this session
             for (UUID playerUUID : session.getParticipatingPlayerUUIDs()) {
                 Player sessionPlayer = Bukkit.getPlayer(playerUUID);
@@ -293,47 +326,16 @@ public class QuestEvent extends BaseEvent implements Listener {
             SoundHelper.playWorldSoundSafely(player.getWorld(), "block.enchantment_table.use", effectLoc, 1.0f, 1.0f);
             SoundHelper.playWorldSoundSafely(player.getWorld(), "entity.player.levelup", effectLoc, 1.0f, 0.5f);
 
-            // Remove chest
-            clickedBlock.setType(Material.AIR);
-            if (clickedBlock.getState() instanceof Chest) {
-                Chest chestState = (Chest) clickedBlock.getState();
-                if (chestState.isPlaced()) chestState.getBlockInventory().clear();
-            }
+            // Remove chest using ContainerManager
+            containerManager.onContainerRemoved(clickedBlock.getLocation());
 
-            // Generate and give rewards
-            RewardGenerator rewardGenerator = plugin.getRewardGenerator();
-
-            if (rewardGenerator != null) {
-                List<ItemStack> rewards = rewardGenerator.generateRewards(
-                    new TierQuantity()
-                        .add(Tier.RARE, 2)
-                        .add(Tier.COMMON, 4)
-                        .build()
-                );
-
-                if (rewards.isEmpty()) {
-                    player.sendMessage(Component.text("The chest was surprisingly empty... better luck next time!", NamedTextColor.YELLOW));
-                    plugin.getLogger().warning("QuestEvent: No RARE rewards generated for winner " + player.getName());
-                } else {
-                    player.sendMessage(Component.text("You received your rewards from the chest!", NamedTextColor.GOLD));
-                    for (ItemStack reward : rewards) {
-                        player.getInventory().addItem(reward).forEach((index, item) -> {
-                            player.getWorld().dropItemNaturally(player.getLocation(), item);
-                            player.sendMessage(Component.text("Your inventory was full! Some items were dropped at your feet.", NamedTextColor.RED));
-                        });
-                    }
-                }
-            } else {
-                plugin.getLogger().severe("QuestEvent: RewardGenerator is null. Cannot give rewards to " + player.getName());
-                player.sendMessage(Component.text("An error occurred while attempting to grant your rewards. Please contact an admin.", NamedTextColor.RED));
-            }
-
-            // Deactivate this session and clean up its resources
+            // Clean up the session
             cleanupSession(session);
+            activeSessions.remove(session);
 
-            // If no more active sessions, end the event
-            if (activeSessions.stream().noneMatch(QuestSession::isActive)) {
-                finishEvent();
+            // End the event if this was the last session
+            if (activeSessions.isEmpty()) {
+                onEnd(null, null); // sessionId and players are not needed for cleanup
             }
         }
     }
@@ -401,16 +403,6 @@ public class QuestEvent extends BaseEvent implements Listener {
             }
         }
     }
-    
-    private void finishEvent() {
-        if (eventActive) {
-            HandlerList.unregisterAll(this);
-            eventActive = false;
-            activeSessions.clear();
-            plugin.getLogger().info("QuestEvent finished and all resources cleaned up.");
-        }
-    }
-    
     @Override
     public String getName() {
         return "QuestEvent";
@@ -419,15 +411,5 @@ public class QuestEvent extends BaseEvent implements Listener {
     @Override
     public String getDescription() {
         return "Players must seek a chest placed randomly in the world via coordinates in a book. First to interact wins rare loot.";
-    }
-
-    @Override
-    public void onStart(UUID sessionId, Set<Player> players) {
-        throw new UnsupportedOperationException("Unimplemented method 'onStart'");
-    }
-
-    @Override
-    public void onEnd(UUID sessionId, Set<Player> players) {
-        throw new UnsupportedOperationException("Unimplemented method 'onEnd'");
     }
 }
