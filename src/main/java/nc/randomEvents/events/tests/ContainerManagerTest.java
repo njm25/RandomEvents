@@ -49,17 +49,15 @@ public class ContainerManagerTest extends BaseEvent {
             // Test Case 1: Empty instant reward green shulker box (should be cleared)
             Location instantRewardGreenLoc = findSafeLocation(player.getLocation());
             if (instantRewardGreenLoc != null) {
-                Container container = containerManager.createContainer(
+                Container container = ContainerManager.createContainer(
                     instantRewardGreenLoc,
                     ContainerType.INSTANT_REWARD,
                     "instant_reward_green_" + player.getName(),
-                    sessionId,
-                    Material.GREEN_SHULKER_BOX,
-                    null, // No quest items
-                    null, // No non-quest items
-                    null, // No random rewards
-                    true // Should be cleared
-                );
+                    sessionId
+                )
+                .material(ContainerManager.ContainerMaterial.GREEN_SHULKER_BOX)
+                .clearAtEnd(true)
+                .build(containerManager);
                 if (container != null) {
                     containers.add(instantRewardGreenLoc);
                 }
@@ -68,17 +66,15 @@ public class ContainerManagerTest extends BaseEvent {
             // Test Case 2: Empty regular green shulker box (should be cleared)
             Location regularGreenLoc = findSafeLocation(player.getLocation());
             if (regularGreenLoc != null) {
-                Container container = containerManager.createContainer(
+                Container container = ContainerManager.createContainer(
                     regularGreenLoc,
                     ContainerType.REGULAR,
                     "regular_green_" + player.getName(),
-                    sessionId,
-                    Material.GREEN_SHULKER_BOX,
-                    null, // No quest items
-                    null, // No non-quest items
-                    null, // No random rewards
-                    true // Should be cleared
-                );
+                    sessionId
+                )
+                .material(ContainerManager.ContainerMaterial.GREEN_SHULKER_BOX)
+                .clearAtEnd(true)
+                .build(containerManager);
                 if (container != null) {
                     containers.add(regularGreenLoc);
                 }
@@ -87,17 +83,15 @@ public class ContainerManagerTest extends BaseEvent {
             // Test Case 3: Empty instant reward red shulker box (should not be cleared)
             Location instantRewardRedLoc = findSafeLocation(player.getLocation());
             if (instantRewardRedLoc != null) {
-                Container container = containerManager.createContainer(
+                Container container = ContainerManager.createContainer(
                     instantRewardRedLoc,
                     ContainerType.INSTANT_REWARD,
                     "instant_reward_red_" + player.getName(),
-                    sessionId,
-                    Material.RED_SHULKER_BOX,
-                    null, // No quest items
-                    null, // No non-quest items
-                    null, // No random rewards
-                    false // Should not be cleared
-                );
+                    sessionId
+                )
+                .material(ContainerManager.ContainerMaterial.RED_SHULKER_BOX)
+                .clearAtEnd(false)
+                .build(containerManager);
                 if (container != null) {
                     containers.add(instantRewardRedLoc);
                 }
@@ -106,17 +100,15 @@ public class ContainerManagerTest extends BaseEvent {
             // Test Case 4: Empty regular red shulker box (should not be cleared)
             Location regularRedLoc = findSafeLocation(player.getLocation());
             if (regularRedLoc != null) {
-                Container container = containerManager.createContainer(
+                Container container = ContainerManager.createContainer(
                     regularRedLoc,
                     ContainerType.REGULAR,
                     "regular_red_" + player.getName(),
-                    sessionId,
-                    Material.RED_SHULKER_BOX,
-                    null, // No quest items
-                    null, // No non-quest items
-                    null, // No random rewards
-                    false // Should not be cleared
-                );
+                    sessionId
+                )
+                .material(ContainerManager.ContainerMaterial.RED_SHULKER_BOX)
+                .clearAtEnd(false)
+                .build(containerManager);
                 if (container != null) {
                     containers.add(regularRedLoc);
                 }
@@ -131,17 +123,16 @@ public class ContainerManagerTest extends BaseEvent {
                 questItems.add(new ItemStack(Material.ENCHANTED_GOLDEN_APPLE, 1));
                 questItems.add(new ItemStack(Material.NETHERITE_INGOT, 1));
                 
-                Container container = containerManager.createContainer(
+                Container container = ContainerManager.createContainer(
                     questPurpleLoc,
                     ContainerType.REGULAR,
                     "quest_purple_" + player.getName(),
-                    sessionId,
-                    Material.PURPLE_SHULKER_BOX,
-                    questItems,
-                    null, // No non-quest items
-                    null, // No random rewards
-                    false // Should still be cleared due to quest items
-                );
+                    sessionId
+                )
+                .material(ContainerManager.ContainerMaterial.PURPLE_SHULKER_BOX)
+                .questItems(questItems)
+                .clearAtEnd(false)
+                .build(containerManager);
                 if (container != null) {
                     containers.add(questPurpleLoc);
                 }
@@ -171,17 +162,18 @@ public class ContainerManagerTest extends BaseEvent {
                 rewardTiers.put(Tier.COMMON, 3);
                 rewardTiers.put(Tier.BASIC, 5);
 
-                Container container = containerManager.createContainer(
+                Container container = ContainerManager.createContainer(
                     mixedCyanLoc,
                     ContainerType.REGULAR,
                     "mixed_cyan_" + player.getName(),
-                    sessionId,
-                    Material.CYAN_SHULKER_BOX,
-                    questItems,
-                    nonQuestItems,
-                    rewardTiers,
-                    false // Should not be cleared (but quest items will be)
-                );
+                    sessionId
+                )
+                .material(ContainerManager.ContainerMaterial.CYAN_SHULKER_BOX)
+                .questItems(questItems)
+                .nonQuestItems(nonQuestItems)
+                .rewardTiers(rewardTiers)
+                .clearAtEnd(false)
+                .build(containerManager);
                 if (container != null) {
                     containers.add(mixedCyanLoc);
                 }

@@ -4,7 +4,7 @@ import nc.randomEvents.RandomEvents;
 import nc.randomEvents.core.BaseEvent;
 import nc.randomEvents.services.RewardGenerator.Tier;
 import nc.randomEvents.services.participants.container.ContainerManager;
-import nc.randomEvents.services.participants.container.ContainerData.ContainerType;
+import nc.randomEvents.services.participants.container.ContainerData;
 import nc.randomEvents.services.participants.EquipmentManager;
 import nc.randomEvents.utils.LocationHelper;
 import nc.randomEvents.utils.SoundHelper;
@@ -144,7 +144,11 @@ public class QuestEvent extends BaseEvent implements Listener {
                     activeSessions.add(session);
 
                     // Create container using ContainerManager with rewards
-                    containerManager.createContainer(chestLocation, ContainerType.INSTANT_REWARD, "quest_chest", sessionId, Material.CHEST, null, null, tierQuantities, true);
+                    ContainerManager.createContainer(chestLocation, ContainerData.ContainerType.INSTANT_REWARD, "quest_chest", sessionId)
+                        .material(ContainerManager.ContainerMaterial.CHEST)
+                        .rewardTiers(tierQuantities)
+                        .clearAtEnd(true)
+                        .build(containerManager);
                     
                     // Distribute books to group members using EquipmentManager
                     distributeQuestBooks(group, chestLocation, sessionId);
