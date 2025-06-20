@@ -5,13 +5,12 @@ import nc.randomEvents.core.SessionParticipant;
 import nc.randomEvents.services.RewardGenerator;
 import nc.randomEvents.services.RewardGenerator.Tier;
 import nc.randomEvents.utils.PersistentDataHelper;
+import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.block.*;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
@@ -33,11 +32,11 @@ public class ContainerManager implements SessionParticipant {
         this.plugin = plugin;
         this.registry = new ContainerRegistry();
         
+        // The DataManager now handles verification during the loading process.
+        plugin.getDataManager().loadAndVerifyContainers(registry.getAllContainers());
+        
         // Initialize the behavior manager (it handles its own events)
         new ContainerBehaviorManager(plugin);
-        
-        // Load existing containers
-        plugin.getDataManager().loadContainers(registry.getAllContainers());
         
         // Register as session participant
         plugin.getSessionRegistry().registerParticipant(this);
@@ -128,7 +127,7 @@ public class ContainerManager implements SessionParticipant {
         // Set custom name if applicable
         if (builder.type == ContainerData.ContainerType.REGULAR && builder.inventoryName != null && !builder.inventoryName.isEmpty()) {
             if (container instanceof Nameable) {
-                ((Nameable) container).setCustomName(builder.inventoryName);
+                ((Nameable) container).customName(Component.text(builder.inventoryName));
             }
         }
 
