@@ -24,7 +24,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.UUID;
-import java.util.Map;
 import java.util.Iterator;
 
 public class ContainerBehaviorManager implements Listener {
@@ -112,25 +111,6 @@ public class ContainerBehaviorManager implements Listener {
                         
                         plugin.getLogger().info("Successfully recovered container data for " + block.getLocation());
                     }
-                }
-            }
-        }
-        
-        // Check for containers in registry that should be in this chunk but aren't
-        for (Map.Entry<Location, ContainerData> entry : plugin.getContainerManager().getRegistry().getAllContainers().entrySet()) {
-            Location loc = entry.getKey();
-            if (loc.getWorld().equals(event.getChunk().getWorld()) &&
-                loc.getBlockX() >> 4 == event.getChunk().getX() &&
-                loc.getBlockZ() >> 4 == event.getChunk().getZ()) {
-                
-                // Container should be in this chunk
-                Block block = loc.getBlock();
-                if (!(block.getState() instanceof Container) || !isEventContainer(block)) {
-                    // Container is missing or not an event container
-                    plugin.getLogger().warning("Container in registry at " + loc + 
-                        " is missing from world. Removing from registry.");
-                    plugin.getContainerManager().getRegistry().unregisterContainer(loc);
-                    plugin.getContainerManager().saveAllContainers();
                 }
             }
         }
