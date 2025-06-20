@@ -10,6 +10,8 @@ import org.bukkit.block.*;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
@@ -77,6 +79,7 @@ public class ContainerManager implements SessionParticipant {
         private List<ItemStack> nonQuestItems = Collections.emptyList();
         private Map<Tier, Integer> rewardTiers = Collections.emptyMap();
         private boolean clearAtEnd = true;
+        private String inventoryName = null;
 
         public createContainer(Location location, ContainerData.ContainerType type, String containerId, UUID sessionId) {
             this.location = location;
@@ -104,6 +107,10 @@ public class ContainerManager implements SessionParticipant {
             this.clearAtEnd = clear;
             return this;
         }
+        public createContainer inventoryName(String name) {
+            this.inventoryName = name;
+            return this;
+        }
         public Container build(ContainerManager mgr) {
             return mgr.createContainerInternal(this);
         }
@@ -117,11 +124,20 @@ public class ContainerManager implements SessionParticipant {
             return null;
         }
         Container container = (Container) block.getState();
+
+        // Set custom name if applicable
+        if (builder.type == ContainerData.ContainerType.REGULAR && builder.inventoryName != null && !builder.inventoryName.isEmpty()) {
+            if (container instanceof Nameable) {
+                ((Nameable) container).setCustomName(builder.inventoryName);
+            }
+        }
+
         PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CONTAINER_KEY, PersistentDataType.BYTE, (byte) 1);
         PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CONTAINER_ID_KEY, PersistentDataType.STRING, builder.containerId);
         PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CONTAINER_SESSION_KEY, PersistentDataType.STRING, builder.sessionId.toString());
         PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CONTAINER_TYPE_KEY, PersistentDataType.STRING, builder.type.name());
         PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CLEAR_AT_END_KEY, PersistentDataType.BYTE, (byte) (builder.clearAtEnd ? 1 : 0));
+        
         container.update();
         if (!builder.questItems.isEmpty()) {
             for (ItemStack item : builder.questItems) {
