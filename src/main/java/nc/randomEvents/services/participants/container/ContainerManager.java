@@ -41,78 +41,119 @@ public class ContainerManager implements SessionParticipant {
         plugin.getSessionRegistry().registerParticipant(this);
     }
 
-    public Container createContainer(Location location, ContainerData.ContainerType type, String containerId, UUID sessionId,
-                                   Material containerMaterial, List<ItemStack> questItems, List<ItemStack> nonQuestItems,
-                                   Map<Tier, Integer> rewardTiers, Boolean clearAtEnd) {
-        Block block = location.getBlock();
-        block.setType(containerMaterial != null ? containerMaterial : Material.CHEST);
-        
+    public enum ContainerMaterial {
+        CHEST(Material.CHEST),
+        BARREL(Material.BARREL),
+        SHULKER_BOX(Material.SHULKER_BOX),
+        WHITE_SHULKER_BOX(Material.WHITE_SHULKER_BOX),
+        ORANGE_SHULKER_BOX(Material.ORANGE_SHULKER_BOX),
+        MAGENTA_SHULKER_BOX(Material.MAGENTA_SHULKER_BOX),
+        LIGHT_BLUE_SHULKER_BOX(Material.LIGHT_BLUE_SHULKER_BOX),
+        YELLOW_SHULKER_BOX(Material.YELLOW_SHULKER_BOX),
+        LIME_SHULKER_BOX(Material.LIME_SHULKER_BOX),
+        PINK_SHULKER_BOX(Material.PINK_SHULKER_BOX),
+        GRAY_SHULKER_BOX(Material.GRAY_SHULKER_BOX),
+        LIGHT_GRAY_SHULKER_BOX(Material.LIGHT_GRAY_SHULKER_BOX),
+        CYAN_SHULKER_BOX(Material.CYAN_SHULKER_BOX),
+        PURPLE_SHULKER_BOX(Material.PURPLE_SHULKER_BOX),
+        BLUE_SHULKER_BOX(Material.BLUE_SHULKER_BOX),
+        BROWN_SHULKER_BOX(Material.BROWN_SHULKER_BOX),
+        GREEN_SHULKER_BOX(Material.GREEN_SHULKER_BOX),
+        RED_SHULKER_BOX(Material.RED_SHULKER_BOX),
+        BLACK_SHULKER_BOX(Material.BLACK_SHULKER_BOX);
+
+        private final Material bukkitMaterial;
+        ContainerMaterial(Material bukkitMaterial) { this.bukkitMaterial = bukkitMaterial; }
+        public Material getBukkitMaterial() { return bukkitMaterial; }
+    }
+
+    public static class createContainer {
+        private final Location location;
+        private final ContainerData.ContainerType type;
+        private final String containerId;
+        private final UUID sessionId;
+        private ContainerMaterial containerMaterial = ContainerMaterial.CHEST;
+        private List<ItemStack> questItems = Collections.emptyList();
+        private List<ItemStack> nonQuestItems = Collections.emptyList();
+        private Map<Tier, Integer> rewardTiers = Collections.emptyMap();
+        private boolean clearAtEnd = true;
+
+        public createContainer(Location location, ContainerData.ContainerType type, String containerId, UUID sessionId) {
+            this.location = location;
+            this.type = type;
+            this.containerId = containerId;
+            this.sessionId = sessionId;
+        }
+        public createContainer material(ContainerMaterial material) {
+            if (material != null) this.containerMaterial = material;
+            return this;
+        }
+        public createContainer questItems(List<ItemStack> items) {
+            if (items != null) this.questItems = items;
+            return this;
+        }
+        public createContainer nonQuestItems(List<ItemStack> items) {
+            if (items != null) this.nonQuestItems = items;
+            return this;
+        }
+        public createContainer rewardTiers(Map<Tier, Integer> tiers) {
+            if (tiers != null) this.rewardTiers = tiers;
+            return this;
+        }
+        public createContainer clearAtEnd(boolean clear) {
+            this.clearAtEnd = clear;
+            return this;
+        }
+        public Container build(ContainerManager mgr) {
+            return mgr.createContainerInternal(this);
+        }
+    }
+
+    private Container createContainerInternal(createContainer builder) {
+        Block block = builder.location.getBlock();
+        block.setType(builder.containerMaterial.getBukkitMaterial());
         if (!(block.getState() instanceof Container)) {
             block.setType(Material.AIR);
             return null;
         }
-
         Container container = (Container) block.getState();
-        
-        // Add persistent data to the container
-        PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CONTAINER_KEY, 
-                               PersistentDataType.BYTE, (byte) 1);
-        PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CONTAINER_ID_KEY, 
-                               PersistentDataType.STRING, containerId);
-        PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CONTAINER_SESSION_KEY, 
-                               PersistentDataType.STRING, sessionId.toString());
-        PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CONTAINER_TYPE_KEY, 
-                               PersistentDataType.STRING, type.name());
-        
-        // Store clear at end setting
-        if (clearAtEnd != null) {
-            PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CLEAR_AT_END_KEY,
-                                   PersistentDataType.BYTE, (byte) (clearAtEnd ? 1 : 0));
-        }
-        
+        PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CONTAINER_KEY, PersistentDataType.BYTE, (byte) 1);
+        PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CONTAINER_ID_KEY, PersistentDataType.STRING, builder.containerId);
+        PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CONTAINER_SESSION_KEY, PersistentDataType.STRING, builder.sessionId.toString());
+        PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CONTAINER_TYPE_KEY, PersistentDataType.STRING, builder.type.name());
+        PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CLEAR_AT_END_KEY, PersistentDataType.BYTE, (byte) (builder.clearAtEnd ? 1 : 0));
         container.update();
-
-        // Add quest items first
-        if (questItems != null && !questItems.isEmpty()) {
-            for (ItemStack item : questItems) {
-                // Mark item as quest item
+        if (!builder.questItems.isEmpty()) {
+            for (ItemStack item : builder.questItems) {
                 ItemMeta meta = item.getItemMeta();
                 if (meta != null) {
-                    PersistentDataHelper.set(meta.getPersistentDataContainer(), plugin, QUEST_ITEM_KEY, 
-                                           PersistentDataType.BYTE, (byte) 1);
-                    PersistentDataHelper.set(meta.getPersistentDataContainer(), plugin, QUEST_ITEM_SESSION_KEY, 
-                                           PersistentDataType.STRING, sessionId.toString());
+                    PersistentDataHelper.set(meta.getPersistentDataContainer(), plugin, QUEST_ITEM_KEY, PersistentDataType.BYTE, (byte) 1);
+                    PersistentDataHelper.set(meta.getPersistentDataContainer(), plugin, QUEST_ITEM_SESSION_KEY, PersistentDataType.STRING, builder.sessionId.toString());
                     item.setItemMeta(meta);
                 }
                 container.getInventory().addItem(item);
             }
         }
-
-        // Add non-quest items
-        if (nonQuestItems != null && !nonQuestItems.isEmpty()) {
-            container.getInventory().addItem(nonQuestItems.toArray(new ItemStack[0]));
+        if (!builder.nonQuestItems.isEmpty()) {
+            container.getInventory().addItem(builder.nonQuestItems.toArray(new ItemStack[0]));
         }
-
-        // Generate and add random rewards if tiers are provided
-        if (rewardTiers != null && !rewardTiers.isEmpty()) {
+        if (!builder.rewardTiers.isEmpty()) {
             RewardGenerator rewardGenerator = plugin.getRewardGenerator();
             if (rewardGenerator != null) {
-                List<ItemStack> rewards = rewardGenerator.generateRewards(rewardTiers);
+                List<ItemStack> rewards = rewardGenerator.generateRewards(builder.rewardTiers);
                 if (!rewards.isEmpty()) {
                     container.getInventory().addItem(rewards.toArray(new ItemStack[0]));
                 }
             }
         }
-        
-        // Register the container
-        ContainerData data = new ContainerData(location, type, containerId, sessionId, 
-            clearAtEnd != null ? clearAtEnd : plugin.getSessionRegistry().getSession(sessionId).getEvent().getClearContainerAtEndDefault());
-        registry.registerContainer(location, data);
-        
-        // Save container data
+        ContainerData data = new ContainerData(builder.location, builder.type, builder.containerId, builder.sessionId, builder.clearAtEnd);
+        registry.registerContainer(builder.location, data);
         saveAllContainers();
-        
         return container;
+    }
+
+    public static createContainer createContainer(Location location, ContainerData.ContainerType type, String containerId, UUID sessionId) {
+        return new createContainer(location, type, containerId, sessionId);
     }
 
     @Override
