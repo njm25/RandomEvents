@@ -178,6 +178,25 @@ public class ContainerManagerTest extends BaseEvent {
                     containers.add(mixedCyanLoc);
                 }
             }
+
+            // Test Case 7: Regular chest with custom inventory name
+            Location customNameLoc = findSafeLocation(player.getLocation());
+            if (customNameLoc != null) {
+                Container container = ContainerManager.createContainer(
+                    customNameLoc,
+                    ContainerType.REGULAR,
+                    "custom_name_" + player.getName(),
+                    sessionId
+                )
+                .material(ContainerManager.ContainerMaterial.CHEST)
+                .inventoryName("§6§lCustom Treasure Chest")
+                .clearAtEnd(true)
+                .build(containerManager);
+                if (container != null) {
+                    containers.add(customNameLoc);
+                    player.sendMessage(Component.text("Created custom named chest! Right-click to see the custom title.", NamedTextColor.GREEN));
+                }
+            }
             
             playerContainers.put(player.getUniqueId(), containers);
         }
