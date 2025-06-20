@@ -1,6 +1,9 @@
 package nc.randomEvents.services;
 
 import nc.randomEvents.RandomEvents;
+import nc.randomEvents.services.participants.container.ContainerData;
+import org.bukkit.Location;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -8,6 +11,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.logging.Level;
 
 public class DataManager {
@@ -15,6 +20,7 @@ public class DataManager {
     private FileConfiguration dataConfig = null;
     private File configFile = null;
     private static final String WORLDS_PATH = "accepted-worlds";
+    private static final String CONTAINERS_PATH = "containers";
 
     public DataManager(RandomEvents plugin) {
         this.plugin = plugin;
@@ -85,5 +91,79 @@ public class DataManager {
             saveData();
         }
         return removed;
+    }
+
+    // Container data management methods
+    public void saveContainers(Map<Location, ContainerData> containers) {
+        for (Map.Entry<Location, ContainerData> entry : containers.entrySet()) {
+            Location loc = entry.getKey();
+            ContainerData data = entry.getValue();
+            
+            String path = String.format("%s.%s.%d,%d,%d", 
+                CONTAINERS_PATH,
+                loc.getWorld().getName(),
+                loc.getBlockX(),
+                loc.getBlockY(),
+                loc.getBlockZ());
+            
+            getData().set(path + ".type", data.getType().name());
+            getData().set(path + ".container_id", data.getContainerId());
+            getData().set(path + ".session_id", data.getSessionId().toString());
+            getData().set(path + ".clear_at_end", data.isClearAtEnd());
+            getData().set(path + ".last_modified", data.getLastModified());
+        }
+        saveData();
+    }
+
+    public void loadContainers(Map<Location, ContainerData> containers) {
+        ConfigurationSection containersSection = getData().getConfigurationSection(CONTAINERS_PATH);
+        if (containersSection == null) {
+            return;
+        }
+        
+        for (String worldName : containersSection.getKeys(false)) {
+            ConfigurationSection worldSection = containersSection.getConfigurationSection(worldName);
+            if (worldSection == null) continue;
+            
+            for (String coords : worldSection.getKeys(false)) {
+                ConfigurationSection containerSection = worldSection.getConfigurationSection(coords);
+                if (containerSection == null) continue;
+                
+                try {
+                    String[] parts = coords.split(",");
+                    int x = Integer.parseInt(parts[0]);
+                    int y = Integer.parseInt(parts[1]);
+                    int z = Integer.parseInt(parts[2]);
+                    
+                    Location location = new Location(
+                        plugin.getServer().getWorld(worldName),
+                        x, y, z
+                    );
+                    
+                    ContainerData.ContainerType type = ContainerData.ContainerType.valueOf(containerSection.getString("type"));
+                    String containerId = containerSection.getString("container_id");
+                    UUID sessionId = UUID.fromString(containerSection.getString("session_id"));
+                    boolean clearAtEnd = containerSection.getBoolean("clear_at_end");
+                    
+                    ContainerData data = new ContainerData(location, type, containerId, sessionId, clearAtEnd);
+                    containers.put(location, data);
+                    
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Failed to load container data for " + worldName + "," + coords + ": " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    public void removeContainer(Location location) {
+        String path = String.format("%s.%s.%d,%d,%d", 
+            CONTAINERS_PATH,
+            location.getWorld().getName(),
+            location.getBlockX(),
+            location.getBlockY(),
+            location.getBlockZ());
+        
+        getData().set(path, null);
+        saveData();
     }
 }

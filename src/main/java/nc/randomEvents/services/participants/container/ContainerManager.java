@@ -19,7 +19,6 @@ import java.util.*;
 public class ContainerManager implements SessionParticipant {
     private final RandomEvents plugin;
     private final ContainerRegistry registry;
-    private final ContainerPersistence persistence;
     private static final String CONTAINER_KEY = "container";
     private static final String CONTAINER_ID_KEY = "container_id";
     private static final String CONTAINER_SESSION_KEY = "container_session";
@@ -31,13 +30,12 @@ public class ContainerManager implements SessionParticipant {
     public ContainerManager(RandomEvents plugin) {
         this.plugin = plugin;
         this.registry = new ContainerRegistry();
-        this.persistence = new ContainerPersistence(plugin, registry);
         
         // Initialize the behavior manager (it handles its own events)
         new ContainerBehaviorManager(plugin);
         
         // Load existing containers
-        persistence.loadContainers();
+        plugin.getDataManager().loadContainers(registry.getAllContainers());
         
         // Register as session participant
         plugin.getSessionRegistry().registerParticipant(this);
@@ -112,7 +110,7 @@ public class ContainerManager implements SessionParticipant {
         registry.registerContainer(location, data);
         
         // Save container data
-        persistence.saveContainers();
+        saveAllContainers();
         
         return container;
     }
@@ -225,7 +223,7 @@ public class ContainerManager implements SessionParticipant {
         }
         
         // Save container data
-        persistence.saveContainers();
+        saveAllContainers();
     }
 
     private boolean isQuestItem(ItemStack item, UUID sessionId) {
@@ -239,15 +237,15 @@ public class ContainerManager implements SessionParticipant {
     }
 
     public void saveAllContainers() {
-        persistence.saveContainers();
+        plugin.getDataManager().saveContainers(registry.getAllContainers());
     }
 
     public void onContainerRemoved(Location location) {
         // Remove the container from the registry
         registry.unregisterContainer(location);
         
-        // Save the updated container data
-        persistence.saveContainers();
+        // Remove from data file
+        plugin.getDataManager().removeContainer(location);
     }
 
     public ContainerRegistry getRegistry() {
