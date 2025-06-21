@@ -28,6 +28,7 @@ interface IDataManager {
     <T extends PluginData> void set(String id, T data);
     <T extends PluginData> boolean remove(Class<T> dataClass, String id);
     <T extends PluginData> Collection<T> getAll(Class<T> dataClass);
+    <T extends PluginData> Set<String> getAllKeys(Class<T> dataClass);
 }
 
 public class DataManager implements IDataManager {
@@ -80,10 +81,8 @@ public class DataManager implements IDataManager {
         Class<?> currentClass = dataClass;
         while (currentClass != null && currentClass != Object.class) {
             for (Field field : currentClass.getDeclaredFields()) {
-                // Skip static, transient, and synthetic fields
-                if (Modifier.isStatic(field.getModifiers()) || 
-                    Modifier.isTransient(field.getModifiers()) ||
-                    field.isSynthetic()) {
+                // Skip static and synthetic fields
+                if (Modifier.isStatic(field.getModifiers()) || field.isSynthetic()) {
                     continue;
                 }
                 
@@ -94,10 +93,16 @@ public class DataManager implements IDataManager {
         
         fieldMetadata.put(dataClass, fields);
         
-        // Log discovered fields for debugging
+        // Log discovered non-transient fields for debugging
         plugin.getLogger().info("Registered " + dataClass.getSimpleName() + 
-                               " with " + fields.size() + " serializable fields: " +
-                               fields.stream().map(f -> f.name).reduce((a, b) -> a + ", " + b).orElse("none"));
+                               " with " + fields.stream()
+                                              .filter(f -> !Modifier.isTransient(f.field.getModifiers()))
+                                              .count() + " serializable fields: " +
+                               fields.stream()
+                                    .filter(f -> !Modifier.isTransient(f.field.getModifiers()))
+                                    .map(f -> f.name)
+                                    .reduce((a, b) -> a + ", " + b)
+                                    .orElse("none"));
     }
 
     /**
@@ -212,54 +217,6 @@ public class DataManager implements IDataManager {
     }
 
     /**
-     * Serialize a data object to config using cached field metadata
-     */
-    private void serializeToConfig(PluginData data, String basePath) throws IllegalAccessException {
-        Class<?> clazz = data.getClass();
-        
-        // Clear existing data at this path
-        getData().set(basePath, null);
-        
-        // Use cached field metadata for efficient serialization
-        List<FieldMetadata> fields = fieldMetadata.get(clazz);
-        if (fields == null) {
-            plugin.getLogger().warning("No field metadata found for " + clazz.getSimpleName() + 
-                                     ". Make sure it's properly registered.");
-            return;
-        }
-        
-        for (FieldMetadata fieldMeta : fields) {
-            Object value = fieldMeta.field.get(data);
-            if (value == null) continue;
-            
-            String fieldPath = basePath + "." + fieldMeta.name;
-            
-            // Handle different field types based on cached metadata
-            if (fieldMeta.isDirectlySerializable) {
-                getData().set(fieldPath, value);
-            } else if (fieldMeta.isUUID) {
-                getData().set(fieldPath, value.toString());
-            } else if (fieldMeta.isLocation) {
-                Location loc = (Location) value;
-                getData().set(fieldPath + ".world", loc.getWorld().getName());
-                getData().set(fieldPath + ".x", loc.getBlockX());
-                getData().set(fieldPath + ".y", loc.getBlockY());
-                getData().set(fieldPath + ".z", loc.getBlockZ());
-            } else if (fieldMeta.isEnum) {
-                getData().set(fieldPath, ((Enum<?>) value).name());
-            } else if (fieldMeta.isConfigSerializable) {
-                getData().set(fieldPath, ((ConfigurationSerializable) value).serialize());
-            } else if (fieldMeta.needsJsonSerialization) {
-                // For complex objects, store as JSON
-                getData().set(fieldPath, gson.toJson(value));
-            } else {
-                // Fallback to string representation
-                getData().set(fieldPath, value.toString());
-            }
-        }
-    }
-
-    /**
      * Deserialize a data object from config using cached field metadata
      */
     private <T extends PluginData> T deserializeFromConfig(Class<T> dataClass, ConfigurationSection section) throws Exception {
@@ -310,33 +267,87 @@ public class DataManager implements IDataManager {
 
         T instance = constructor.newInstance(params);
 
-        // Find and set the transient field that corresponds to the ID
-        String id = section.getName();
+        // Find the single transient field that will be our handle to the YAML parent key
+        String primaryKey = section.getName();
+        Field transientField = null;
+        
         for (FieldMetadata fieldMeta : fields) {
-            if (Modifier.isTransient(fieldMeta.field.getModifiers())) {
-                // Get the getId() value after hypothetically setting this field
-                try {
-                    Object oldValue = fieldMeta.field.get(instance);
-                    Object newValue = convertIdToFieldType(id, fieldMeta.type);
-                    if (newValue != null) {
-                        fieldMeta.field.set(instance, newValue);
-                        String generatedId = instance.getId();
-                        if (id.equals(generatedId)) {
-                            // We found the right field, keep the value set
-                            break;
-                        }
-                        // Not the right field, restore old value
-                        fieldMeta.field.set(instance, oldValue);
-                    }
-                } catch (Exception e) {
-                    // Skip this field if we can't set it
-                    plugin.getLogger().fine("Skipping transient field " + fieldMeta.name + 
-                                          " for " + dataClass.getSimpleName() + ": " + e.getMessage());
+            Field field = fieldMeta.field;
+            if (Modifier.isTransient(field.getModifiers())) {
+                if (transientField != null) {
+                    throw new IllegalStateException("Multiple transient fields found in " + dataClass.getSimpleName() + 
+                                                  ". Only one transient field (primary key) is allowed.");
                 }
+                transientField = field;
             }
         }
+        
+        if (transientField == null) {
+            throw new IllegalStateException("No transient field (primary key) found in " + dataClass.getSimpleName());
+        }
+
+        // Convert the YAML parent key to the right type and set it in our handle field
+        Object convertedKey = convertIdToFieldType(primaryKey, transientField.getType());
+        if (convertedKey == null) {
+            throw new IllegalStateException("Could not convert primary key '" + primaryKey + 
+                                          "' to type " + transientField.getType().getSimpleName());
+        }
+        transientField.set(instance, convertedKey);
 
         return instance;
+    }
+
+    /**
+     * Serialize a data object to config using cached field metadata
+     */
+    private void serializeToConfig(PluginData data, String basePath) throws IllegalAccessException {
+        Class<?> clazz = data.getClass();
+        
+        // Clear existing data at this path
+        getData().set(basePath, null);
+        
+        // Use cached field metadata for efficient serialization
+        List<FieldMetadata> fields = fieldMetadata.get(clazz);
+        if (fields == null) {
+            plugin.getLogger().warning("No field metadata found for " + clazz.getSimpleName() + 
+                                     ". Make sure it's properly registered.");
+            return;
+        }
+        
+        for (FieldMetadata fieldMeta : fields) {
+            // Skip transient fields - they're just handles to YAML parent keys
+            if (Modifier.isTransient(fieldMeta.field.getModifiers())) {
+                continue;
+            }
+
+            Object value = fieldMeta.field.get(data);
+            if (value == null) continue;
+            
+            String fieldPath = basePath + "." + fieldMeta.name;
+            
+            // Handle different field types based on cached metadata
+            if (fieldMeta.isDirectlySerializable) {
+                getData().set(fieldPath, value);
+            } else if (fieldMeta.isUUID) {
+                getData().set(fieldPath, value.toString());
+            } else if (fieldMeta.isLocation) {
+                Location loc = (Location) value;
+                getData().set(fieldPath + ".world", loc.getWorld().getName());
+                getData().set(fieldPath + ".x", loc.getBlockX());
+                getData().set(fieldPath + ".y", loc.getBlockY());
+                getData().set(fieldPath + ".z", loc.getBlockZ());
+            } else if (fieldMeta.isEnum) {
+                getData().set(fieldPath, ((Enum<?>) value).name());
+            } else if (fieldMeta.isConfigSerializable) {
+                getData().set(fieldPath, ((ConfigurationSerializable) value).serialize());
+            } else if (fieldMeta.needsJsonSerialization) {
+                // For complex objects, store as JSON
+                getData().set(fieldPath, gson.toJson(value));
+            } else {
+                // Fallback to string representation
+                getData().set(fieldPath, value.toString());
+            }
+        }
     }
 
     /**
@@ -438,6 +449,25 @@ public class DataManager implements IDataManager {
         );
         
         return primitiveToWrapper.get(primitiveType) == wrapperType;
+    }
+
+    /**
+     * Get all primary keys for a given data class
+     * These are the direct child keys under the class's section in the YAML
+     */
+    public <T extends PluginData> Set<String> getAllKeys(Class<T> dataClass) {
+        if (!registeredTypes.containsKey(dataClass)) {
+            throw new IllegalArgumentException("Data type " + dataClass.getSimpleName() + " is not registered");
+        }
+
+        String sectionPath = registeredTypes.get(dataClass);
+        ConfigurationSection section = getData().getConfigurationSection(sectionPath);
+        
+        if (section == null) {
+            return new HashSet<>();
+        }
+
+        return new HashSet<>(section.getKeys(false));
     }
 
     // File management methods
