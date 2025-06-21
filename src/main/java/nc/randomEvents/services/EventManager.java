@@ -56,7 +56,7 @@ public class EventManager {
     public boolean startEvent(String eventName) {
         BaseEvent event = events.get(eventName.toLowerCase());
         if (event != null) {
-            List<String> acceptedWorlds = plugin.getDataManager().getAcceptedWorlds();
+            List<String> acceptedWorlds = plugin.getDataManager().getAcceptedWorldNames();
             if (acceptedWorlds.isEmpty()) {
                 plugin.getLogger().info("No accepted worlds configured. Event '" + eventName + "' will not run. Use /randomevents addworld <worldname>");
                 return false;

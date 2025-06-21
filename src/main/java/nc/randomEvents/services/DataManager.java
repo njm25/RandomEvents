@@ -1,7 +1,9 @@
 package nc.randomEvents.services;
 
 import nc.randomEvents.RandomEvents;
-import nc.randomEvents.services.participants.container.ContainerData;
+import nc.randomEvents.data.ContainerData;
+import nc.randomEvents.data.WorldData;
+
 import org.bukkit.Location;
 import org.bukkit.block.Container;
 import org.bukkit.configuration.ConfigurationSection;
@@ -10,10 +12,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.logging.Level;
 
 public class DataManager {
@@ -35,9 +34,9 @@ public class DataManager {
         }
         dataConfig = YamlConfiguration.loadConfiguration(configFile);
 
-        // Ensure the list path exists
-        if (!dataConfig.isList(WORLDS_PATH)) {
-            dataConfig.set(WORLDS_PATH, new ArrayList<String>());
+        // Ensure the worlds path exists
+        if (!dataConfig.isConfigurationSection(WORLDS_PATH)) {
+            dataConfig.createSection(WORLDS_PATH);
             saveData();
         }
     }
@@ -69,29 +68,67 @@ public class DataManager {
         }
     }
 
-    public List<String> getAcceptedWorlds() {
-        return getData().getStringList(WORLDS_PATH);
+    public Set<WorldData> getAcceptedWorlds() {
+        Set<WorldData> worlds = new HashSet<>();
+        ConfigurationSection worldsSection = getData().getConfigurationSection(WORLDS_PATH);
+        if (worldsSection == null) return worlds;
+
+        for (String worldName : worldsSection.getKeys(false)) {
+            ConfigurationSection worldSection = worldsSection.getConfigurationSection(worldName);
+            if (worldSection == null) continue;
+
+            try {
+                String worldIdStr = worldSection.getString("world_id");
+                UUID worldId = worldIdStr != null ? UUID.fromString(worldIdStr) : UUID.randomUUID();
+
+                WorldData worldData = new WorldData(worldName, worldId);
+                worlds.add(worldData);
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.WARNING, "Failed to load world data for " + worldName + ", skipping.", e);
+            }
+        }
+        return worlds;
+    }
+
+    public List<String> getAcceptedWorldNames() {
+        return getAcceptedWorlds().stream()
+                .map(WorldData::getWorldName)
+                .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
     }
 
     public boolean addAcceptedWorld(String worldName) {
-        List<String> worlds = getAcceptedWorlds();
-        if (!worlds.contains(worldName.toLowerCase())) {
-            worlds.add(worldName.toLowerCase());
-            getData().set(WORLDS_PATH, worlds);
-            saveData();
-            return true;
+        Set<WorldData> worlds = getAcceptedWorlds();
+        WorldData newWorld = new WorldData(worldName);
+        
+        if (worlds.contains(newWorld)) {
+            return false; // Already exists
         }
-        return false;
+
+        worlds.add(newWorld);
+        saveWorlds(worlds);
+        return true;
     }
 
     public boolean removeAcceptedWorld(String worldName) {
-        List<String> worlds = getAcceptedWorlds();
-        boolean removed = worlds.remove(worldName.toLowerCase());
+        Set<WorldData> worlds = getAcceptedWorlds();
+        boolean removed = worlds.removeIf(world -> world.getWorldName().equalsIgnoreCase(worldName));
+        
         if (removed) {
-            getData().set(WORLDS_PATH, worlds);
-            saveData();
+            saveWorlds(worlds);
         }
         return removed;
+    }
+
+    private void saveWorlds(Set<WorldData> worlds) {
+        // Clear the existing worlds section
+        getData().set(WORLDS_PATH, null);
+
+        for (WorldData worldData : worlds) {
+            String path = WORLDS_PATH + "." + worldData.getWorldName();
+            getData().set(path + ".world_id", worldData.getWorldId().toString());
+            getData().set(path + ".last_modified", worldData.getLastModified());
+        }
+        saveData();
     }
 
     // Container data management methods

@@ -7,10 +7,7 @@ import nc.randomEvents.services.SessionRegistry;
 import nc.randomEvents.utils.PersistentDataHelper;
 import org.bukkit.*;
 import org.bukkit.entity.*;
-import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDeathEvent;
-import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.*;
@@ -75,42 +72,6 @@ public class EntityManager implements Listener, SessionParticipant {
     }
 
     /**
-     * Checks if an entity is a session entity
-     * @param entity The entity to check
-     * @return true if the entity is a session entity
-     */
-    private boolean isSessionEntity(Entity entity) {
-        if (entity == null) return false;
-        return PersistentDataHelper.has(entity.getPersistentDataContainer(), plugin, ENTITY_KEY, PersistentDataType.BYTE);
-    }
-
-    /**
-     * Gets the session ID for a session entity
-     * @param entity The entity to check
-     * @return The session ID, or null if not a session entity
-     */
-    private UUID getEntitySessionId(Entity entity) {
-        if (entity == null) return null;
-
-        String sessionIdStr = PersistentDataHelper.get(
-            entity.getPersistentDataContainer(),
-            plugin,
-            ENTITY_SESSION_KEY,
-            PersistentDataType.STRING
-        );
-        
-        if (sessionIdStr != null) {
-            try {
-                return UUID.fromString(sessionIdStr);
-            } catch (IllegalArgumentException e) {
-                plugin.getLogger().warning("Invalid session ID format in entity: " + sessionIdStr);
-                return null;
-            }
-        }
-        return null;
-    }
-
-    /**
      * Checks if an entity belongs to a specific session
      * @param entity The entity to check
      * @param sessionId The session ID to check against
@@ -151,34 +112,8 @@ public class EntityManager implements Listener, SessionParticipant {
         }
     }
 
-    @EventHandler
-    public void onEntityDeath(EntityDeathEvent event) {
-        Entity entity = event.getEntity();
-        if (isSessionEntity(entity)) {
-            UUID sessionId = getEntitySessionId(entity);
-            if (sessionId != null) {
-                Set<UUID> entities = sessionEntities.get(sessionId);
-                if (entities != null) {
-                    entities.remove(entity.getUniqueId());
-                }
-                // Clear drops if session is no longer active
-                if (!sessionRegistry.isActive(sessionId)) {
-                    event.getDrops().clear();
-                    event.setDroppedExp(0);
-                }
-            }
-        }
-    }
 
-    @EventHandler
-    public void onEntitySpawn(EntitySpawnEvent event) {
-        // Monitor entity spawns for logging/debugging if needed
-        Entity entity = event.getEntity();
-        if (isSessionEntity(entity)) {
-            UUID sessionId = getEntitySessionId(entity);
-            if (sessionId != null && !sessionRegistry.isActive(sessionId)) {
-                event.setCancelled(true);
-            }
-        }
+    public Map<UUID, Set<UUID>> getSessionEntities() {
+        return sessionEntities;
     }
 } 

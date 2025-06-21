@@ -2,9 +2,9 @@ package nc.randomEvents.events.Quest;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.core.BaseEvent;
+import nc.randomEvents.core.LootContainer;
 import nc.randomEvents.services.RewardGenerator.Tier;
-import nc.randomEvents.services.participants.container.ContainerManager;
-import nc.randomEvents.services.participants.container.ContainerData;
+import nc.randomEvents.services.participants.ContainerManager;
 import nc.randomEvents.services.participants.EquipmentManager;
 import nc.randomEvents.utils.LocationHelper;
 import nc.randomEvents.utils.SoundHelper;
@@ -144,11 +144,11 @@ public class QuestEvent extends BaseEvent implements Listener {
                     activeSessions.add(session);
 
                     // Create container using ContainerManager with rewards
-                    ContainerManager.createContainer(chestLocation, ContainerData.ContainerType.INSTANT_REWARD, "quest_chest", sessionId)
-                        .material(ContainerManager.ContainerMaterial.CHEST)
-                        .rewardTiers(tierQuantities)
-                        .clearAtEnd(true)
-                        .build(containerManager);
+                    LootContainer lootContainer = containerManager.createContainer(chestLocation, sessionId, LootContainer.ContainerType.INSTANT_REWARD, true);
+                    lootContainer.setMaterial(LootContainer.ContainerMaterial.CHEST);
+                    lootContainer.addRewardTier(Tier.RARE, 2);
+                    lootContainer.addRewardTier(Tier.COMMON, 4);
+                    lootContainer.spawn();
                     
                     // Distribute books to group members using EquipmentManager
                     distributeQuestBooks(group, chestLocation, sessionId);
@@ -331,7 +331,10 @@ public class QuestEvent extends BaseEvent implements Listener {
             SoundHelper.playWorldSoundSafely(player.getWorld(), "entity.player.levelup", effectLoc, 1.0f, 0.5f);
 
             // Remove chest using ContainerManager
-            containerManager.onContainerRemoved(clickedBlock.getLocation());
+            UUID sessionId = plugin.getSessionRegistry().getSessionIdForPlayer(player);
+            if (sessionId != null) {
+                containerManager.unregisterContainer(clickedBlock.getLocation(), sessionId);
+            }
 
             // Clean up the session
             cleanupSession(session);

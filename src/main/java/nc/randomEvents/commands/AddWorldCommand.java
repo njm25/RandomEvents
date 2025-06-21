@@ -51,7 +51,7 @@ public class AddWorldCommand implements SubCommand {
 
     public List<String> onTabComplete(CommandSender sender, String[] args) {
         if (args.length == 2) {
-            List<String> currentWorlds = dataManager.getAcceptedWorlds();
+            List<String> currentWorlds = dataManager.getAcceptedWorldNames();
             return Bukkit.getWorlds().stream()
                     .map(World::getName)
                     .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))

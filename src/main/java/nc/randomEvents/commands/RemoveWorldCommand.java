@@ -44,7 +44,7 @@ public class RemoveWorldCommand implements SubCommand {
 
     public List<String> onTabComplete(CommandSender sender, String[] args) {
         if (args.length == 2) {
-            return dataManager.getAcceptedWorlds().stream()
+            return dataManager.getAcceptedWorldNames().stream()
                     .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
                     .sorted()
                     .collect(Collectors.toList());

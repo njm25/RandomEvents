@@ -1,4 +1,4 @@
-package nc.randomEvents.services.participants.container;
+package nc.randomEvents.data;
 
 import org.bukkit.Location;
 import java.util.UUID;
