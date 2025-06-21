@@ -15,7 +15,16 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.util.*;
 
-public class LootContainer {
+interface ILootContainer {
+    void addQuestItem(ItemStack item);
+    void addQuestItems(List<ItemStack> items);
+    void addLootItem(ItemStack item);
+    void addLootItems(List<ItemStack> items);
+    void addRewardTier(Tier tier, int count);
+    boolean spawn();
+}
+
+public class LootContainer implements ILootContainer {
     private final RandomEvents plugin;
     private final ContainerManager containerManager;
     private final Location location;

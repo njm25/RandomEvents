@@ -12,7 +12,15 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-public class EventSession {
+interface IEventSession {
+    void start();
+    void end();
+    UUID getSessionId();
+    Set<Player> getPlayers();
+    BaseEvent getEvent();
+}
+
+public class EventSession implements IEventSession {
     private final UUID sessionId;
     private final BaseEvent event;
     private final Set<Player> players;

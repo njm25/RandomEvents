@@ -4,7 +4,15 @@ import org.bukkit.entity.Player;
 import java.util.Set;
 import java.util.UUID;
 
-public abstract class BaseEvent {
+interface IBaseEvent {
+    void onStart(UUID sessionId, Set<Player> players);
+    void onTick(UUID sessionId, Set<Player> players);
+    void onEnd(UUID sessionId, Set<Player> players);
+    String getName();
+    String getDescription();
+}
+
+public abstract class BaseEvent implements IBaseEvent {
     private long tickInterval = 20L; // Default 1 second
     private long duration = 0; // Default no duration
     private long maxPlayers = 0; // Default no max players
