@@ -286,9 +286,11 @@ public class DataManager implements IDataManager {
         
         // Extract values from config using cached metadata
         for (FieldMetadata fieldMeta : fields) {
-            Object value = deserializeFieldValue(fieldMeta, section);
-            if (value != null) {
-                fieldValues.put(fieldMeta.name, value);
+            if (!Modifier.isTransient(fieldMeta.field.getModifiers())) {
+                Object value = deserializeFieldValue(fieldMeta, section);
+                if (value != null) {
+                    fieldValues.put(fieldMeta.name, value);
+                }
             }
         }
 
@@ -306,7 +308,56 @@ public class DataManager implements IDataManager {
             }
         }
 
-        return constructor.newInstance(params);
+        T instance = constructor.newInstance(params);
+
+        // Find and set the transient field that corresponds to the ID
+        String id = section.getName();
+        for (FieldMetadata fieldMeta : fields) {
+            if (Modifier.isTransient(fieldMeta.field.getModifiers())) {
+                // Get the getId() value after hypothetically setting this field
+                try {
+                    Object oldValue = fieldMeta.field.get(instance);
+                    Object newValue = convertIdToFieldType(id, fieldMeta.type);
+                    if (newValue != null) {
+                        fieldMeta.field.set(instance, newValue);
+                        String generatedId = instance.getId();
+                        if (id.equals(generatedId)) {
+                            // We found the right field, keep the value set
+                            break;
+                        }
+                        // Not the right field, restore old value
+                        fieldMeta.field.set(instance, oldValue);
+                    }
+                } catch (Exception e) {
+                    // Skip this field if we can't set it
+                    plugin.getLogger().fine("Skipping transient field " + fieldMeta.name + 
+                                          " for " + dataClass.getSimpleName() + ": " + e.getMessage());
+                }
+            }
+        }
+
+        return instance;
+    }
+
+    /**
+     * Convert an ID string to the appropriate type for a field
+     */
+    private Object convertIdToFieldType(String id, Class<?> targetType) {
+        try {
+            if (targetType == String.class) {
+                return id;
+            } else if (targetType == UUID.class) {
+                return UUID.fromString(id);
+            } else if (targetType == Integer.class || targetType == int.class) {
+                return Integer.parseInt(id);
+            } else if (targetType == Long.class || targetType == long.class) {
+                return Long.parseLong(id);
+            }
+            // Add more type conversions as needed
+        } catch (Exception e) {
+            // Return null if conversion fails
+        }
+        return null;
     }
 
     /**
