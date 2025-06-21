@@ -1,6 +1,7 @@
 package nc.randomEvents;
 
 import nc.randomEvents.commands.CommandManager;
+import nc.randomEvents.listeners.PlayerListener;
 import nc.randomEvents.services.ConfigManager;
 import nc.randomEvents.services.DataManager;
 import nc.randomEvents.services.DisableManager;
@@ -24,6 +25,7 @@ public class StartManager {
 
     public void start() {
         // First layer: Independent services
+        new PlayerListener(plugin);
         plugin.setMetrics(new Metrics(plugin, 26005));
         plugin.setConfigManager(new ConfigManager(plugin));
         plugin.setDataManager(new DataManager(plugin));

@@ -9,7 +9,16 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.entity.Player;
 
-public class SessionRegistry {
+interface ISessionRegistry {
+    void registerParticipant(SessionParticipant participant);
+    void registerSession(EventSession session);
+    void unregisterSession(UUID sessionId);
+    boolean isActive(UUID sessionId);
+    Collection<EventSession> getActiveSessions();
+    EventSession getSession(UUID sessionId);
+}
+
+public class SessionRegistry implements ISessionRegistry {
     private final Map<UUID, EventSession> activeSessions = new ConcurrentHashMap<>();
     private final Set<SessionParticipant> participants = new HashSet<>();
     

@@ -1,15 +1,17 @@
 package nc.randomEvents.data;
 
+import nc.randomEvents.core.LootContainer.ContainerType;
+import nc.randomEvents.core.PluginData;
 import org.bukkit.Location;
 import java.util.UUID;
 
-public class ContainerData {
-    private final Location location;
-    private final ContainerType type;
-    private final String containerId;
-    private final UUID sessionId;
-    private final boolean clearAtEnd;
-    private long lastModified;
+public class ContainerData implements PluginData {
+    public Location location;
+    public ContainerType type;
+    public String containerId;
+    public UUID sessionId;
+    public boolean clearAtEnd;
+    public long lastModified;
 
     public ContainerData(Location location, ContainerType type, String containerId, UUID sessionId, boolean clearAtEnd) {
         this.location = location;
@@ -20,36 +22,9 @@ public class ContainerData {
         this.lastModified = System.currentTimeMillis();
     }
 
-    public Location getLocation() {
-        return location;
+    @Override
+    public String getId() {
+        return location.toString();
     }
 
-    public ContainerType getType() {
-        return type;
-    }
-
-    public String getContainerId() {
-        return containerId;
-    }
-
-    public UUID getSessionId() {
-        return sessionId;
-    }
-
-    public boolean isClearAtEnd() {
-        return clearAtEnd;
-    }
-
-    public long getLastModified() {
-        return lastModified;
-    }
-
-    public void updateLastModified() {
-        this.lastModified = System.currentTimeMillis();
-    }
-
-    public enum ContainerType {
-        REGULAR,
-        INSTANT_REWARD
-    }
 } 

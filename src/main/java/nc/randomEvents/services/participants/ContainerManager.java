@@ -25,7 +25,13 @@ import org.bukkit.persistence.PersistentDataType;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class ContainerManager implements SessionParticipant {
+interface IContainerManager {
+    LootContainer createContainer(Location location, UUID sessionId, ContainerType type, boolean clearAtEnd);
+    LootContainer createContainer(Location location, UUID sessionId, ContainerType type);
+    LootContainer createContainer(Location location, UUID sessionId);
+}
+
+public class ContainerManager implements SessionParticipant, IContainerManager {
     private final RandomEvents plugin;
     private final SessionRegistry sessionRegistry;
     private static final String CONTAINER_KEY = "container";

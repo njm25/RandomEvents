@@ -3,6 +3,7 @@ package nc.randomEvents.services;
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.core.BaseEvent;
 import nc.randomEvents.core.EventSession;
+import nc.randomEvents.data.WorldData;
 import nc.randomEvents.events.ZombieHorde.ZombieHordeEvent;
 import nc.randomEvents.events.tests.BaseEventTest;
 import nc.randomEvents.events.tests.EntityManagerTest;
@@ -56,7 +57,10 @@ public class EventManager {
     public boolean startEvent(String eventName) {
         BaseEvent event = events.get(eventName.toLowerCase());
         if (event != null) {
-            List<String> acceptedWorlds = plugin.getDataManager().getAcceptedWorldNames();
+            List<String> acceptedWorlds = plugin.getDataManager().getAll(WorldData.class).stream()
+                    .map(WorldData::getWorldName)
+                    .collect(Collectors.toList());
+            
             if (acceptedWorlds.isEmpty()) {
                 plugin.getLogger().info("No accepted worlds configured. Event '" + eventName + "' will not run. Use /randomevents addworld <worldname>");
                 return false;

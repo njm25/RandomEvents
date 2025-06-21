@@ -11,7 +11,6 @@ import org.bukkit.*;
 import org.bukkit.block.*;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.ItemSpawnEvent;
@@ -25,7 +24,13 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.util.*;
 
-public class EquipmentManager implements Listener, SessionParticipant {
+interface IEquipmentManager {
+    void giveEquipment(Player player, ItemStack item, String equipmentId, UUID sessionId);
+    void giveFullKit(Player player, Map<Integer, ItemStack> kit, String kitId, UUID sessionId);
+    void handlePlayerJoinSession(Player player, UUID sessionId);
+}
+
+public class EquipmentManager implements SessionParticipant, IEquipmentManager {
     private final RandomEvents plugin;
     private static final String EQUIPMENT_KEY = "equipment";
     private static final String EQUIPMENT_ID_KEY = "equipment_id";
@@ -105,7 +110,6 @@ public class EquipmentManager implements Listener, SessionParticipant {
     public EquipmentManager(RandomEvents plugin) {
         this.plugin = plugin;
         this.sessionRegistry = plugin.getSessionRegistry();
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
         plugin.getSessionRegistry().registerParticipant(this);
         plugin.getLogger().info("EquipmentManager initialized");
     }
