@@ -18,6 +18,18 @@ public class WorldData implements PluginData {
         this(worldName, UUID.randomUUID());
     }
 
+    public String getWorldName() {
+        return worldName;
+    }
+
+    public UUID getWorldId() {
+        return worldId;
+    }
+
+    public long getLastModified() {
+        return lastModified;
+    }
+
     @Override
     public String getId() {
         return worldName;
