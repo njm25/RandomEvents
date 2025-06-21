@@ -12,6 +12,7 @@ import nc.randomEvents.services.participants.EntityManager;
 import nc.randomEvents.services.participants.EquipmentManager;
 import nc.randomEvents.services.participants.ProjectileManager;
 import nc.randomEvents.services.participants.TestManager;
+import nc.randomEvents.services.participants.ContainerManager;
 import nc.randomEvents.utils.Metrics;
 
 public class StartManager {
@@ -36,6 +37,7 @@ public class StartManager {
         plugin.setTestManager(new TestManager(plugin));
         plugin.setEntityManager(new EntityManager(plugin));
         plugin.setProjectileManager(new ProjectileManager(plugin));
+        plugin.setContainerManager(new ContainerManager(plugin));
 
         // Third layer: Event system that coordinates everything
         plugin.setEventManager(new EventManager(plugin));

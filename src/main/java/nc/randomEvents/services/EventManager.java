@@ -8,9 +8,12 @@ import nc.randomEvents.events.tests.BaseEventTest;
 import nc.randomEvents.events.tests.EntityManagerTest;
 import nc.randomEvents.events.tests.EquipmentManagerTest;
 import nc.randomEvents.events.tests.ItemHelperTest;
+import nc.randomEvents.events.tests.ContainerManagerTest;
 import nc.randomEvents.events.LootGoblin.LootGoblinEvent;
 import nc.randomEvents.events.Sheepocalypse.SheepocalypseEvent;
 import nc.randomEvents.events.Meteor.MeteorEvent;
+import nc.randomEvents.events.Quest.QuestEvent;
+
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -42,6 +45,8 @@ public class EventManager {
         addEvent(new ZombieHordeEvent(plugin));
         addEvent(new SheepocalypseEvent(plugin));
         addEvent(new MeteorEvent(plugin));
+        addEvent(new ContainerManagerTest(plugin));
+        addEvent(new QuestEvent(plugin));
     }
 
     public void addEvent(BaseEvent event) {
@@ -51,7 +56,7 @@ public class EventManager {
     public boolean startEvent(String eventName) {
         BaseEvent event = events.get(eventName.toLowerCase());
         if (event != null) {
-            List<String> acceptedWorlds = plugin.getDataManager().getAcceptedWorlds();
+            List<String> acceptedWorlds = plugin.getDataManager().getAcceptedWorldNames();
             if (acceptedWorlds.isEmpty()) {
                 plugin.getLogger().info("No accepted worlds configured. Event '" + eventName + "' will not run. Use /randomevents addworld <worldname>");
                 return false;
