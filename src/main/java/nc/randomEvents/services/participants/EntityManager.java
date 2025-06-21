@@ -11,7 +11,11 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.util.*;
 
-public class EntityManager implements SessionParticipant {
+interface IEntityManager {
+    <T extends Entity> T spawnTracked(EntityType type, Location location, String entityId, UUID sessionId);
+}
+
+public class EntityManager implements SessionParticipant, IEntityManager {
     private final RandomEvents plugin;
     private static final String ENTITY_KEY = "entity";
     private static final String ENTITY_ID_KEY = "entity_id";
