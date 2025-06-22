@@ -2,6 +2,7 @@ package nc.randomEvents;
 
 import org.bukkit.plugin.java.JavaPlugin;
 import nc.randomEvents.commands.CommandManager;
+import nc.randomEvents.listeners.PlayerListener;
 import nc.randomEvents.services.*;
 import nc.randomEvents.services.participants.BlockManager;
 import nc.randomEvents.services.participants.EntityManager;
@@ -28,7 +29,8 @@ public final class RandomEvents extends JavaPlugin {
     private EntityManager entityManager;
     private ProjectileManager projectileManager;
     private ContainerManager containerManager;
-
+    private PlayerListener playerListener;
+    
     @Override
     public void onEnable() {
         try {
@@ -110,6 +112,10 @@ public final class RandomEvents extends JavaPlugin {
         this.containerManager = containerManager;
     }
 
+    void setPlayerListener(PlayerListener playerListener) {
+        this.playerListener = playerListener;
+    }
+
     // #endregion Setters
 
     // #region Getters
@@ -168,6 +174,10 @@ public final class RandomEvents extends JavaPlugin {
 
     public ContainerManager getContainerManager() {
         return containerManager;
+    }   
+
+    public PlayerListener getPlayerListener() {
+        return playerListener;
     }
 
     // #endregion Getters

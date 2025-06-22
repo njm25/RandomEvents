@@ -3,6 +3,7 @@ package nc.randomEvents.services.participants;
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.core.EventSession;
 import nc.randomEvents.core.SessionParticipant;
+import nc.randomEvents.listeners.EntityListener;
 import nc.randomEvents.services.SessionRegistry;
 import nc.randomEvents.utils.PersistentDataHelper;
 import org.bukkit.*;
@@ -22,11 +23,13 @@ public class EntityManager implements SessionParticipant, IEntityManager {
     private static final String ENTITY_SESSION_KEY = "entity_session";
     private final SessionRegistry sessionRegistry;
     private final Map<UUID, Set<UUID>> sessionEntities = new HashMap<>();
-
+    private EntityListener entityListener;
     public EntityManager(RandomEvents plugin) {
         this.plugin = plugin;
         this.sessionRegistry = plugin.getSessionRegistry();
         plugin.getSessionRegistry().registerParticipant(this);
+        entityListener = new EntityListener(plugin);
+        entityListener.registerListener(plugin);
         plugin.getLogger().info("EntityManager initialized");
     }
 

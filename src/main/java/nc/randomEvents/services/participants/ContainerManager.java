@@ -42,14 +42,14 @@ public class ContainerManager implements SessionParticipant, IContainerManager {
     
     // Track containers by session
     private final Map<UUID, Set<Location>> sessionContainers = new ConcurrentHashMap<>();
-
+    private ContainerListener containerListener;
     public ContainerManager(RandomEvents plugin) {
         this.plugin = plugin;
         this.sessionRegistry = plugin.getSessionRegistry();
         plugin.getSessionRegistry().registerParticipant(this);
-        
+        containerListener = new ContainerListener(plugin);
+        containerListener.registerListener(plugin);
         // Initialize the behavior manager (it handles its own events)
-        new ContainerListener(plugin);
         
         plugin.getLogger().info("ContainerManager initialized");
     }
