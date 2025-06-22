@@ -288,14 +288,10 @@ public class EquipmentManager implements SessionParticipant, IEquipmentManager {
         Set<Player> players = sessionRegistry.getSession(sessionId).getPlayers();
         for (Player player : players) {
             cleanupPlayerInventory(player, sessionId);
-            plugin.getLogger().info("Cleaned up player inventory: " + player.getName());
             // Check player's cursor
             ItemStack cursorItem = player.getItemOnCursor();
-
             if (cursorItem != null) {
-                plugin.getLogger().info("Checking event item in player's cursor: " + cursorItem.getType());
                 if (isEventEquipment(cursorItem, sessionId)) {
-                    plugin.getLogger().info("Cleaning up event item in player's cursor: " + cursorItem.getType());
                     player.setItemOnCursor(null);
                 } else if (cursorItem.getType().name().contains("SHULKER_BOX")) {
                     cleanupShulkerBox(cursorItem, sessionId);
