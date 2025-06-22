@@ -25,14 +25,13 @@ public class StartManager {
 
     public void start() {
         // First layer: Independent services
-        new PlayerListener(plugin);
         plugin.setMetrics(new Metrics(plugin, 26005));
         plugin.setConfigManager(new ConfigManager(plugin));
         plugin.setDataManager(new DataManager(plugin));
         plugin.setSessionRegistry(new SessionRegistry(plugin));
         plugin.setRewardGenerator(new RewardGenerator(plugin));
 
-        // Second layer: Services that depend on the registry
+        // Second layer: Services that depend on independent services
         plugin.setDisableManager(new DisableManager(plugin));
         plugin.setEquipmentManager(new EquipmentManager(plugin));
         plugin.setBlockManager(new BlockManager(plugin));
@@ -40,11 +39,12 @@ public class StartManager {
         plugin.setEntityManager(new EntityManager(plugin));
         plugin.setProjectileManager(new ProjectileManager(plugin));
         plugin.setContainerManager(new ContainerManager(plugin));
+        new PlayerListener(plugin);
 
         // Third layer: Event system that coordinates everything
         plugin.setEventManager(new EventManager(plugin));
 
-        // Finally: Command system that needs access to everything
+        // Fourth layer: Services that need access to everything
         plugin.setCommandManager(new CommandManager(plugin));
     }
 }
