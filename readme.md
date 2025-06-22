@@ -23,7 +23,7 @@ Create a new file named `config.txt` and configure the following settings:
 PROJECT_DIR=C:\Users\Name\GitHub\RandomEvents
 SERVER_DIR=C:\Users\Name\Server
 PLUGIN_NAME=RandomEvents-1.0.jar
-SERVER_JAR=paper-1.21.5-101.jar
+SERVER_JAR=paper-1.21.6.jar
 ```
 
 ### 3. Deployment
