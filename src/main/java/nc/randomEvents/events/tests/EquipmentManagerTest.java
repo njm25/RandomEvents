@@ -18,7 +18,7 @@ public class EquipmentManagerTest extends BaseEvent {
         
         // Configure event timing
         setTickInterval(20L); // Tick every second
-        setDuration(800L); // Run for 20 seconds
+        setDuration(100L); // Run for 5 seconds
     }
     
     @Override

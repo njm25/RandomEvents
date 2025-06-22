@@ -233,7 +233,8 @@ public class ContainerManager implements SessionParticipant, IContainerManager {
         }
 
         // Clean up quest items in player inventories
-        for (Player player : plugin.getServer().getOnlinePlayers()) {
+        Set<Player> players = session.getPlayers();
+        for (Player player : players) {
             // Clean main inventory
             for (ItemStack item : player.getInventory().getContents()) {
                 if (item != null && isQuestItem(item, sessionId)) {
