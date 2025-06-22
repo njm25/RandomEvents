@@ -289,6 +289,7 @@ public class EquipmentManager implements SessionParticipant, IEquipmentManager {
         for (Player player : players) {
             cleanupPlayerInventory(player, sessionId);
             // Check player's cursor
+            player.updateInventory(); // triggers sync from client
             ItemStack cursorItem = player.getItemOnCursor();
             if (cursorItem != null) {
                 if (isEventEquipment(cursorItem, sessionId)) {

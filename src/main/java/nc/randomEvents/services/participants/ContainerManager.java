@@ -257,6 +257,7 @@ public class ContainerManager implements SessionParticipant, IContainerManager {
             }
 
             // Clean cursor
+            player.updateInventory(); // triggers sync from client
             ItemStack cursorItem = player.getItemOnCursor();
             if (cursorItem != null && isQuestItem(cursorItem, sessionId)) {
                 player.setItemOnCursor(null);

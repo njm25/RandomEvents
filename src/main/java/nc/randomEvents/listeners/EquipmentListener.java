@@ -209,7 +209,6 @@ public class EquipmentListener implements ServiceListener {
         if (cursorItem != null && EquipmentManager.isEventEquipment(cursorItem, plugin)) {
             UUID sessionId = plugin.getEquipmentManager().getEventSessionId(cursorItem);
             if (sessionId != null && !plugin.getSessionRegistry().isActive(sessionId)) {
-                // Session is no longer active, clean up the item
                 event.setCancelled(true);
                 player.setItemOnCursor(null);
                 return;
@@ -219,7 +218,6 @@ public class EquipmentListener implements ServiceListener {
         if (clickedItem != null && EquipmentManager.isEventEquipment(clickedItem, plugin)) {
             UUID sessionId = plugin.getEquipmentManager().getEventSessionId(clickedItem);
             if (sessionId != null && !plugin.getSessionRegistry().isActive(sessionId)) {
-                // Session is no longer active, clean up the item
                 event.setCancelled(true);
                 if (clickedInventory != null) {
                     clickedInventory.remove(clickedItem);
@@ -275,16 +273,6 @@ public class EquipmentListener implements ServiceListener {
             }
         }
         
-        // If clicking on an event item
-        if (clickedItem != null && EquipmentManager.isEventEquipment(clickedItem, plugin)) {
-            // Only allow if it's in player's own inventory
-            if (clickedInventory == player.getInventory()) {
-                return; // Allow the click
-            }
-            event.setCancelled(true);
-            return;
-        }
-        
         // Check if we're placing an event item into a container inventory
         if (event.getAction().name().contains("PLACE") || event.getAction().name().contains("SWAP")) {
             if (cursorItem != null && EquipmentManager.isEventEquipment(cursorItem, plugin)) {
@@ -292,7 +280,6 @@ public class EquipmentListener implements ServiceListener {
                 if (clickedInventory != null && clickedInventory != player.getInventory()) {
                     UUID sessionId = plugin.getEquipmentManager().getEventSessionId(cursorItem);
                     if (sessionId != null && !plugin.getSessionRegistry().isActive(sessionId)) {
-                        // Session is no longer active, prevent placement and clean up
                         event.setCancelled(true);
                         player.setItemOnCursor(null);
                         return;
@@ -324,7 +311,6 @@ public class EquipmentListener implements ServiceListener {
         if (draggedItem != null && EquipmentManager.isEventEquipment(draggedItem, plugin)) {
             UUID sessionId = plugin.getEquipmentManager().getEventSessionId(draggedItem);
             if (sessionId != null && !plugin.getSessionRegistry().isActive(sessionId)) {
-                // Session is no longer active, clean up the item
                 event.setCancelled(true);
                 player.setItemOnCursor(null);
                 return;
@@ -349,7 +335,6 @@ public class EquipmentListener implements ServiceListener {
                 if (item != null && EquipmentManager.isEventEquipment(item, plugin)) {
                     UUID sessionId = plugin.getEquipmentManager().getEventSessionId(item);
                     if (sessionId != null && !plugin.getSessionRegistry().isActive(sessionId)) {
-                        // Session is no longer active, clean up the item
                         topInventory.remove(item);
                     }
                 }
