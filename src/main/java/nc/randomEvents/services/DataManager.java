@@ -1,43 +1,486 @@
 package nc.randomEvents.services;
 
 import nc.randomEvents.RandomEvents;
-import nc.randomEvents.data.ContainerData;
+import nc.randomEvents.core.PluginData;
+import nc.randomEvents.data.PlayerData;
 import nc.randomEvents.data.WorldData;
 
 import org.bukkit.Location;
-import org.bukkit.block.Container;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
+import org.bukkit.configuration.serialization.ConfigurationSerializable;
 
-public class DataManager {
+interface IDataManager {
+    void register(Class<? extends PluginData> dataClass, String sectionPath);
+    <T extends PluginData> T get(Class<T> dataClass, String id);
+    <T extends PluginData> void set(String id, T data);
+    <T extends PluginData> boolean remove(Class<T> dataClass, String id);
+    <T extends PluginData> Collection<T> getAll(Class<T> dataClass);
+    <T extends PluginData> Set<String> getAllKeys(Class<T> dataClass);
+}
+
+public class DataManager implements IDataManager {
     private final RandomEvents plugin;
     private FileConfiguration dataConfig = null;
     private File configFile = null;
-    private static final String WORLDS_PATH = "accepted-worlds";
-    private static final String CONTAINERS_PATH = "containers";
+    private final Gson gson;
+    
+    // Registry for data types and their config paths
+    private final Map<Class<? extends PluginData>, String> registeredTypes = new ConcurrentHashMap<>();
+    private final Map<Class<? extends PluginData>, Map<String, PluginData>> cache = new ConcurrentHashMap<>();
+    // Registry for field metadata to optimize serialization/deserialization
+    private final Map<Class<? extends PluginData>, List<FieldMetadata>> fieldMetadata = new ConcurrentHashMap<>();
 
     public DataManager(RandomEvents plugin) {
         this.plugin = plugin;
+        this.gson = new GsonBuilder()
+            .serializeNulls()
+            .create();
         saveDefaultConfig();
-        reloadData(); // Load data on initialization
+        reloadData();
+        
+        // Register data types
+        register(WorldData.class, "accepted-worlds");
+        register(PlayerData.class, "players");
     }
 
+    /**
+     * Register a data type with its configuration section path
+     * Dynamically analyzes the class structure for optimal serialization
+     */
+    @Override
+    public void register(Class<? extends PluginData> dataClass, String sectionPath) {
+        registeredTypes.put(dataClass, sectionPath);
+        cache.put(dataClass, new ConcurrentHashMap<>());
+        
+        // Analyze class structure and cache field metadata
+        analyzeClassStructure(dataClass);
+        
+        loadDataType(dataClass);
+    }
+    
+    /**
+     * Dynamically analyze the class structure to optimize serialization/deserialization
+     */
+    private void analyzeClassStructure(Class<? extends PluginData> dataClass) {
+        List<FieldMetadata> fields = new ArrayList<>();
+        
+        // Get all declared fields including inherited ones
+        Class<?> currentClass = dataClass;
+        while (currentClass != null && currentClass != Object.class) {
+            for (Field field : currentClass.getDeclaredFields()) {
+                // Skip static and synthetic fields
+                if (Modifier.isStatic(field.getModifiers()) || field.isSynthetic()) {
+                    continue;
+                }
+                
+                fields.add(new FieldMetadata(field));
+            }
+            currentClass = currentClass.getSuperclass();
+        }
+        
+        fieldMetadata.put(dataClass, fields);
+        
+        // Log discovered non-transient fields for debugging
+        plugin.getLogger().info("Registered " + dataClass.getSimpleName() + 
+                               " with " + fields.stream()
+                                              .filter(f -> !Modifier.isTransient(f.field.getModifiers()))
+                                              .count() + " serializable fields: " +
+                               fields.stream()
+                                    .filter(f -> !Modifier.isTransient(f.field.getModifiers()))
+                                    .map(f -> f.name)
+                                    .reduce((a, b) -> a + ", " + b)
+                                    .orElse("none"));
+    }
+
+    /**
+     * Get a data instance by type and ID
+     */
+    @SuppressWarnings("unchecked")
+    @Override
+    public <T extends PluginData> T get(Class<T> dataClass, String id) {
+        if (!registeredTypes.containsKey(dataClass)) {
+            throw new IllegalArgumentException("Data type " + dataClass.getSimpleName() + " is not registered");
+        }
+        
+        Map<String, PluginData> typeCache = cache.get(dataClass);
+        return (T) typeCache.get(id);
+    }
+
+    /**
+     * Set/save a data instance
+     */
+    public <T extends PluginData> void set(String id, T data) {
+        Class<? extends PluginData> dataClass = data.getClass();
+        if (!registeredTypes.containsKey(dataClass)) {
+            throw new IllegalArgumentException("Data type " + dataClass.getSimpleName() + " is not registered");
+        }
+
+        // Update cache
+        Map<String, PluginData> typeCache = cache.get(dataClass);
+        typeCache.put(id, data);
+
+        // Save to config
+        saveDataInstance(data);
+    }
+
+    /**
+     * Remove a data instance
+     */
+    public <T extends PluginData> boolean remove(Class<T> dataClass, String id) {
+        if (!registeredTypes.containsKey(dataClass)) {
+            throw new IllegalArgumentException("Data type " + dataClass.getSimpleName() + " is not registered");
+        }
+
+        Map<String, PluginData> typeCache = cache.get(dataClass);
+        PluginData removed = typeCache.remove(id);
+        
+        if (removed != null) {
+            String sectionPath = registeredTypes.get(dataClass);
+            getData().set(sectionPath + "." + id, null);
+            saveData();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Get all instances of a data type
+     */
+    @SuppressWarnings("unchecked")
+    public <T extends PluginData> Collection<T> getAll(Class<T> dataClass) {
+        if (!registeredTypes.containsKey(dataClass)) {
+            throw new IllegalArgumentException("Data type " + dataClass.getSimpleName() + " is not registered");
+        }
+
+        Map<String, PluginData> typeCache = cache.get(dataClass);
+        return (Collection<T>) typeCache.values();
+    }
+
+    /**
+     * Load all data for a specific type from config
+     */
+    private <T extends PluginData> void loadDataType(Class<T> dataClass) {
+        String sectionPath = registeredTypes.get(dataClass);
+        ConfigurationSection section = getData().getConfigurationSection(sectionPath);
+        Map<String, PluginData> typeCache = cache.get(dataClass);
+        
+        if (section == null) {
+            // Create the section if it doesn't exist
+            getData().createSection(sectionPath);
+            saveData();
+            return;
+        }
+
+        for (String id : section.getKeys(false)) {
+            try {
+                ConfigurationSection instanceSection = section.getConfigurationSection(id);
+                if (instanceSection == null) continue;
+
+                T instance = deserializeFromConfig(dataClass, instanceSection);
+                if (instance != null) {
+                    typeCache.put(id, instance);
+                }
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.WARNING, 
+                    "Failed to load " + dataClass.getSimpleName() + " with id '" + id + "', skipping.", e);
+            }
+        }
+    }
+
+    /**
+     * Save a single data instance to config
+     */
+    private void saveDataInstance(PluginData data) {
+        String sectionPath = registeredTypes.get(data.getClass());
+        String id = data.getId();
+        
+        try {
+            serializeToConfig(data, sectionPath + "." + id);
+            saveData();
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, 
+                "Failed to save " + data.getClass().getSimpleName() + " with id '" + id + "'", e);
+        }
+    }
+
+    /**
+     * Deserialize a data object from config using cached field metadata
+     */
+    private <T extends PluginData> T deserializeFromConfig(Class<T> dataClass, ConfigurationSection section) throws Exception {
+        // Try to find a suitable constructor
+        Constructor<T> constructor = findBestConstructor(dataClass);
+        
+        if (constructor == null) {
+            throw new IllegalArgumentException("No suitable constructor found for " + dataClass.getSimpleName());
+        }
+
+        // Get constructor parameters
+        Class<?>[] paramTypes = constructor.getParameterTypes();
+        Object[] params = new Object[paramTypes.length];
+        
+        // Use cached field metadata for efficient deserialization
+        List<FieldMetadata> fields = fieldMetadata.get(dataClass);
+        if (fields == null) {
+            plugin.getLogger().warning("No field metadata found for " + dataClass.getSimpleName() + 
+                                     ". Make sure it's properly registered.");
+            throw new IllegalStateException("Class not properly registered: " + dataClass.getSimpleName());
+        }
+        
+        Map<String, Object> fieldValues = new HashMap<>();
+        
+        // Extract values from config using cached metadata
+        for (FieldMetadata fieldMeta : fields) {
+            if (!Modifier.isTransient(fieldMeta.field.getModifiers())) {
+                Object value = deserializeFieldValue(fieldMeta, section);
+                if (value != null) {
+                    fieldValues.put(fieldMeta.name, value);
+                }
+            }
+        }
+
+        // Match constructor parameters with field values
+        for (int i = 0; i < paramTypes.length; i++) {
+            Class<?> paramType = paramTypes[i];
+            
+            // Find a field value that matches this parameter type
+            for (Map.Entry<String, Object> entry : fieldValues.entrySet()) {
+                if (paramType.isAssignableFrom(entry.getValue().getClass()) || 
+                    (paramType.isPrimitive() && isCompatiblePrimitive(paramType, entry.getValue().getClass()))) {
+                    params[i] = entry.getValue();
+                    break;
+                }
+            }
+        }
+
+        T instance = constructor.newInstance(params);
+
+        // Find the single transient field that will be our handle to the YAML parent key
+        String primaryKey = section.getName();
+        Field transientField = null;
+        
+        for (FieldMetadata fieldMeta : fields) {
+            Field field = fieldMeta.field;
+            if (Modifier.isTransient(field.getModifiers())) {
+                if (transientField != null) {
+                    throw new IllegalStateException("Multiple transient fields found in " + dataClass.getSimpleName() + 
+                                                  ". Only one transient field (primary key) is allowed.");
+                }
+                transientField = field;
+            }
+        }
+        
+        if (transientField == null) {
+            throw new IllegalStateException("No transient field (primary key) found in " + dataClass.getSimpleName());
+        }
+
+        // Convert the YAML parent key to the right type and set it in our handle field
+        Object convertedKey = convertIdToFieldType(primaryKey, transientField.getType());
+        if (convertedKey == null) {
+            throw new IllegalStateException("Could not convert primary key '" + primaryKey + 
+                                          "' to type " + transientField.getType().getSimpleName());
+        }
+        transientField.set(instance, convertedKey);
+
+        return instance;
+    }
+
+    /**
+     * Serialize a data object to config using cached field metadata
+     */
+    private void serializeToConfig(PluginData data, String basePath) throws IllegalAccessException {
+        Class<?> clazz = data.getClass();
+        
+        // Clear existing data at this path
+        getData().set(basePath, null);
+        
+        // Use cached field metadata for efficient serialization
+        List<FieldMetadata> fields = fieldMetadata.get(clazz);
+        if (fields == null) {
+            plugin.getLogger().warning("No field metadata found for " + clazz.getSimpleName() + 
+                                     ". Make sure it's properly registered.");
+            return;
+        }
+        
+        for (FieldMetadata fieldMeta : fields) {
+            // Skip transient fields - they're just handles to YAML parent keys
+            if (Modifier.isTransient(fieldMeta.field.getModifiers())) {
+                continue;
+            }
+
+            Object value = fieldMeta.field.get(data);
+            if (value == null) continue;
+            
+            String fieldPath = basePath + "." + fieldMeta.name;
+            
+            // Handle different field types based on cached metadata
+            if (fieldMeta.isDirectlySerializable) {
+                getData().set(fieldPath, value);
+            } else if (fieldMeta.isUUID) {
+                getData().set(fieldPath, value.toString());
+            } else if (fieldMeta.isLocation) {
+                Location loc = (Location) value;
+                getData().set(fieldPath + ".world", loc.getWorld().getName());
+                getData().set(fieldPath + ".x", loc.getBlockX());
+                getData().set(fieldPath + ".y", loc.getBlockY());
+                getData().set(fieldPath + ".z", loc.getBlockZ());
+            } else if (fieldMeta.isEnum) {
+                getData().set(fieldPath, ((Enum<?>) value).name());
+            } else if (fieldMeta.isConfigSerializable) {
+                getData().set(fieldPath, ((ConfigurationSerializable) value).serialize());
+            } else if (fieldMeta.needsJsonSerialization) {
+                // For complex objects, store as JSON
+                getData().set(fieldPath, gson.toJson(value));
+            } else {
+                // Fallback to string representation
+                getData().set(fieldPath, value.toString());
+            }
+        }
+    }
+
+    /**
+     * Convert an ID string to the appropriate type for a field
+     */
+    private Object convertIdToFieldType(String id, Class<?> targetType) {
+        try {
+            if (targetType == String.class) {
+                return id;
+            } else if (targetType == UUID.class) {
+                return UUID.fromString(id);
+            } else if (targetType == Integer.class || targetType == int.class) {
+                return Integer.parseInt(id);
+            } else if (targetType == Long.class || targetType == long.class) {
+                return Long.parseLong(id);
+            }
+            // Add more type conversions as needed
+        } catch (Exception e) {
+            // Return null if conversion fails
+        }
+        return null;
+    }
+
+    /**
+     * Deserialize a field value from config using field metadata
+     */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private Object deserializeFieldValue(FieldMetadata fieldMeta, ConfigurationSection section) {
+        if (!section.contains(fieldMeta.name)) {
+            return null;
+        }
+
+        if (fieldMeta.isUUID) {
+            String uuidStr = section.getString(fieldMeta.name);
+            return uuidStr != null ? UUID.fromString(uuidStr) : null;
+        } else if (fieldMeta.isLocation) {
+            ConfigurationSection locSection = section.getConfigurationSection(fieldMeta.name);
+            if (locSection != null) {
+                String worldName = locSection.getString("world");
+                int x = locSection.getInt("x");
+                int y = locSection.getInt("y");
+                int z = locSection.getInt("z");
+                return new Location(plugin.getServer().getWorld(worldName), x, y, z);
+            }
+        } else if (fieldMeta.isEnum) {
+            String enumName = section.getString(fieldMeta.name);
+            if (enumName != null) {
+                Class<? extends Enum> enumClass = (Class<? extends Enum>) fieldMeta.type;
+                return Enum.valueOf(enumClass, enumName);
+            }
+        } else if (fieldMeta.isConfigSerializable) {
+            try {
+                ConfigurationSection subSection = section.getConfigurationSection(fieldMeta.name);
+                if (subSection != null) {
+                    Map<String, Object> serialized = subSection.getValues(true);
+                    return fieldMeta.type.getConstructor(Map.class).newInstance(serialized);
+                }
+            } catch (Exception e) {
+                plugin.getLogger().warning("Failed to deserialize ConfigurationSerializable field " + 
+                                        fieldMeta.name + " of type " + fieldMeta.type.getName() + ": " + e.getMessage());
+            }
+        } else if (fieldMeta.needsJsonSerialization) {
+            String json = section.getString(fieldMeta.name);
+            return json != null ? gson.fromJson(json, fieldMeta.type) : null;
+        } else if (fieldMeta.isDirectlySerializable) {
+            return section.get(fieldMeta.name);
+        }
+        
+        return null;
+    }
+
+    /**
+     * Find the best constructor for deserialization
+     */
+    private <T> Constructor<T> findBestConstructor(Class<T> clazz) {
+        Constructor<?>[] constructors = clazz.getConstructors();
+        
+        // Prefer constructors with more parameters (likely the main constructor)
+        Arrays.sort(constructors, (a, b) -> Integer.compare(b.getParameterCount(), a.getParameterCount()));
+        
+        @SuppressWarnings("unchecked")
+        Constructor<T> bestConstructor = (Constructor<T>) constructors[0];
+        return bestConstructor;
+    }
+
+    /**
+     * Check if primitive types are compatible
+     */
+    private boolean isCompatiblePrimitive(Class<?> primitiveType, Class<?> wrapperType) {
+        Map<Class<?>, Class<?>> primitiveToWrapper = Map.of(
+            int.class, Integer.class,
+            long.class, Long.class,
+            double.class, Double.class,
+            float.class, Float.class,
+            boolean.class, Boolean.class,
+            byte.class, Byte.class,
+            short.class, Short.class,
+            char.class, Character.class
+        );
+        
+        return primitiveToWrapper.get(primitiveType) == wrapperType;
+    }
+
+    /**
+     * Get all primary keys for a given data class
+     * These are the direct child keys under the class's section in the YAML
+     */
+    public <T extends PluginData> Set<String> getAllKeys(Class<T> dataClass) {
+        if (!registeredTypes.containsKey(dataClass)) {
+            throw new IllegalArgumentException("Data type " + dataClass.getSimpleName() + " is not registered");
+        }
+
+        String sectionPath = registeredTypes.get(dataClass);
+        ConfigurationSection section = getData().getConfigurationSection(sectionPath);
+        
+        if (section == null) {
+            return new HashSet<>();
+        }
+
+        return new HashSet<>(section.getKeys(false));
+    }
+
+    // File management methods
     public void reloadData() {
         if (configFile == null) {
             configFile = new File(plugin.getDataFolder(), "data.yml");
         }
         dataConfig = YamlConfiguration.loadConfiguration(configFile);
 
-        // Ensure the worlds path exists
-        if (!dataConfig.isConfigurationSection(WORLDS_PATH)) {
-            dataConfig.createSection(WORLDS_PATH);
-            saveData();
+        // Reload all registered types
+        for (Class<? extends PluginData> dataClass : registeredTypes.keySet()) {
+            cache.put(dataClass, new ConcurrentHashMap<>());
+            loadDataType(dataClass);
         }
     }
 
@@ -68,144 +511,71 @@ public class DataManager {
         }
     }
 
-    public Set<WorldData> getAcceptedWorlds() {
-        Set<WorldData> worlds = new HashSet<>();
-        ConfigurationSection worldsSection = getData().getConfigurationSection(WORLDS_PATH);
-        if (worldsSection == null) return worlds;
+}
 
-        for (String worldName : worldsSection.getKeys(false)) {
-            ConfigurationSection worldSection = worldsSection.getConfigurationSection(worldName);
-            if (worldSection == null) continue;
-
-            try {
-                String worldIdStr = worldSection.getString("world_id");
-                UUID worldId = worldIdStr != null ? UUID.fromString(worldIdStr) : UUID.randomUUID();
-
-                WorldData worldData = new WorldData(worldName, worldId);
-                worlds.add(worldData);
-            } catch (Exception e) {
-                plugin.getLogger().log(Level.WARNING, "Failed to load world data for " + worldName + ", skipping.", e);
-            }
-        }
-        return worlds;
-    }
-
-    public List<String> getAcceptedWorldNames() {
-        return getAcceptedWorlds().stream()
-                .map(WorldData::getWorldName)
-                .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
-    }
-
-    public boolean addAcceptedWorld(String worldName) {
-        Set<WorldData> worlds = getAcceptedWorlds();
-        WorldData newWorld = new WorldData(worldName);
+/**
+ * Metadata class to store field information for efficient serialization
+ */
+class FieldMetadata {
+    final Field field;
+    final String name;
+    final Class<?> type;
+    final boolean isDirectlySerializable;
+    final boolean isEnum;
+    final boolean isUUID;
+    final boolean isLocation;
+    final boolean isConfigSerializable;
+    final boolean isCollection;
+    final boolean needsJsonSerialization;
+    
+    public FieldMetadata(Field field) {
+        this.field = field;
+        this.name = field.getName();
+        this.type = field.getType();
+        field.setAccessible(true);
         
-        if (worlds.contains(newWorld)) {
-            return false; // Already exists
-        }
-
-        worlds.add(newWorld);
-        saveWorlds(worlds);
-        return true;
-    }
-
-    public boolean removeAcceptedWorld(String worldName) {
-        Set<WorldData> worlds = getAcceptedWorlds();
-        boolean removed = worlds.removeIf(world -> world.getWorldName().equalsIgnoreCase(worldName));
+        // Analyze type characteristics
+        this.isDirectlySerializable = isDirectlySerializable(type);
+        this.isEnum = type.isEnum();
+        this.isUUID = type == UUID.class;
+        this.isLocation = type == Location.class;
+        this.isConfigSerializable = ConfigurationSerializable.class.isAssignableFrom(type);
+        this.isCollection = Collection.class.isAssignableFrom(type);
         
-        if (removed) {
-            saveWorlds(worlds);
-        }
-        return removed;
+        // If none of the above, we'll use JSON serialization
+        this.needsJsonSerialization = !(isDirectlySerializable || isEnum || isUUID || 
+                                      isLocation || isConfigSerializable || 
+                                      (isCollection && isCollectionOfSerializables()));
     }
-
-    private void saveWorlds(Set<WorldData> worlds) {
-        // Clear the existing worlds section
-        getData().set(WORLDS_PATH, null);
-
-        for (WorldData worldData : worlds) {
-            String path = WORLDS_PATH + "." + worldData.getWorldName();
-            getData().set(path + ".world_id", worldData.getWorldId().toString());
-            getData().set(path + ".last_modified", worldData.getLastModified());
-        }
-        saveData();
+    
+    private boolean isDirectlySerializable(Class<?> type) {
+        return type == String.class || Number.class.isAssignableFrom(type) || 
+               type == boolean.class || type == Boolean.class ||
+               type.isPrimitive();
     }
-
-    // Container data management methods
-    public void saveContainers(Map<Location, ContainerData> containers) {
-        // Clear the existing containers section
-        getData().set(CONTAINERS_PATH, null);
-
-        for (ContainerData data : containers.values()) {
-            Location loc = data.getLocation();
-            String path = CONTAINERS_PATH + "." + loc.getWorld().getName() + "." + loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ();
-            getData().set(path + ".type", data.getType().name());
-            getData().set(path + ".container_id", data.getContainerId());
-            getData().set(path + ".session_id", data.getSessionId().toString());
-            getData().set(path + ".clear_at_end", data.isClearAtEnd());
-        }
-        saveData();
-    }
-
-    public void loadAndVerifyContainers(Map<Location, ContainerData> containers) {
-        ConfigurationSection containersSection = getData().getConfigurationSection(CONTAINERS_PATH);
-        if (containersSection == null) {
-            return;
-        }
-
-        boolean needsSave = false;
-        for (String worldName : containersSection.getKeys(false)) {
-            ConfigurationSection worldSection = containersSection.getConfigurationSection(worldName);
-            if (worldSection == null) continue;
-
-            for (String coords : worldSection.getKeys(false)) {
-                try {
-                    String[] parts = coords.split(",");
-                    int x = Integer.parseInt(parts[0]);
-                    int y = Integer.parseInt(parts[1]);
-                    int z = Integer.parseInt(parts[2]);
-
-                    Location location = new Location(
-                        plugin.getServer().getWorld(worldName),
-                        x, y, z
-                    );
-
-                    // Verification Step
-                    if (!location.isWorldLoaded() || !(location.getBlock().getState() instanceof Container)) {
-                        plugin.getLogger().warning("Phantom container at " + location + " found in data.yml. Removing.");
-                        worldSection.set(coords, null); // Mark for removal from the config
-                        needsSave = true;
-                        continue;
-                    }
-                    
-                    ConfigurationSection containerSection = worldSection.getConfigurationSection(coords);
-                    if (containerSection == null) continue;
-
-                    ContainerData.ContainerType type = ContainerData.ContainerType.valueOf(containerSection.getString("type"));
-                    String containerId = containerSection.getString("container_id");
-                    UUID sessionId = UUID.fromString(containerSection.getString("session_id"));
-                    boolean clearAtEnd = containerSection.getBoolean("clear_at_end");
-
-                    ContainerData data = new ContainerData(location, type, containerId, sessionId, clearAtEnd);
-                    containers.put(location, data);
-
-                } catch (Exception e) {
-                    plugin.getLogger().log(Level.WARNING, "Failed to load container data for " + worldName + "," + coords + ", it will be removed.", e);
-                    worldSection.set(coords, null);
-                    needsSave = true;
+    
+    private boolean isCollectionOfSerializables() {
+        if (!isCollection) return false;
+        
+        // Try to determine collection's generic type
+        try {
+            java.lang.reflect.Type genericType = field.getGenericType();
+            if (genericType instanceof java.lang.reflect.ParameterizedType) {
+                java.lang.reflect.ParameterizedType pt = (java.lang.reflect.ParameterizedType) genericType;
+                java.lang.reflect.Type[] typeArgs = pt.getActualTypeArguments();
+                if (typeArgs.length > 0 && typeArgs[0] instanceof Class<?>) {
+                    Class<?> elementType = (Class<?>) typeArgs[0];
+                    return isDirectlySerializable(elementType) || 
+                           elementType.isEnum() || 
+                           elementType == UUID.class ||
+                           elementType == Location.class ||
+                           ConfigurationSerializable.class.isAssignableFrom(elementType);
                 }
             }
+        } catch (Exception e) {
+            // If we can't determine the generic type, assume it needs JSON serialization
+            return false;
         }
-
-        if (needsSave) {
-            saveData();
-        }
-    }
-
-    public void removeContainer(Location location) {
-        String path = CONTAINERS_PATH + "." + location.getWorld().getName() + "." + location.getBlockX() + "," + location.getBlockY() + "," + location.getBlockZ();
-        
-        getData().set(path, null);
-        saveData();
+        return false;
     }
 }

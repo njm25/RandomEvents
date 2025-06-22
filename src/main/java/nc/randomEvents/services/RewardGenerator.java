@@ -21,6 +21,11 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.HashMap;
 
+interface IRewardGenerator {
+    List<ItemStack> generateRewards(RewardGenerator.Tier tier, int numberOfItemStacksToGenerate);
+    List<ItemStack> generateRewards(Map<RewardGenerator.Tier, Integer> tierQuantities);
+}
+
 public class RewardGenerator {
     private final RandomEvents plugin;
     private FileConfiguration rewardsConfig = null;

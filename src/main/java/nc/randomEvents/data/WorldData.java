@@ -1,16 +1,23 @@
 package nc.randomEvents.data;
 
+import nc.randomEvents.core.PluginData;
 import java.util.UUID;
 
-public class WorldData {
-    private final String worldName;
-    private final UUID worldId;
-    private long lastModified;
+public class WorldData implements PluginData {
+    private transient String worldName;
+    public UUID worldId;
+    public long lastModified;
 
     public WorldData(String worldName, UUID worldId) {
         this.worldName = worldName;
         this.worldId = worldId;
         this.lastModified = System.currentTimeMillis();
+    }
+
+    // Constructor for deserialization
+    public WorldData(UUID worldId, long lastModified) {
+        this.worldId = worldId;
+        this.lastModified = lastModified;
     }
 
     public WorldData(String worldName) {
@@ -29,25 +36,12 @@ public class WorldData {
         return lastModified;
     }
 
-    public void updateLastModified() {
-        this.lastModified = System.currentTimeMillis();
+    @Override
+    public String getId() {
+        return worldName;
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
-        WorldData worldData = (WorldData) obj;
-        return worldName.equalsIgnoreCase(worldData.worldName);
-    }
-
-    @Override
-    public int hashCode() {
-        return worldName.toLowerCase().hashCode();
-    }
-
-    @Override
-    public String toString() {
-        return "WorldData{worldName='" + worldName + "', worldId=" + worldId + "}";
+    public void setWorldName(String worldName) {
+        this.worldName = worldName;
     }
 }

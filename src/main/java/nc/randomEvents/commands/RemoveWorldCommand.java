@@ -1,6 +1,7 @@
 package nc.randomEvents.commands;
 
 import nc.randomEvents.RandomEvents;
+import nc.randomEvents.data.WorldData;
 import nc.randomEvents.services.DataManager;
 import org.bukkit.command.CommandSender;
 
@@ -29,7 +30,7 @@ public class RemoveWorldCommand implements SubCommand {
         String worldName = args[1];
         // No need to check if world exists with Bukkit.getWorld(worldName) as we are just removing a string
 
-        if (dataManager.removeAcceptedWorld(worldName)) {
+        if (dataManager.remove(WorldData.class, worldName)) {
             sender.sendMessage("World '" + worldName + "' removed from accepted worlds.");
         } else {
             sender.sendMessage("World '" + worldName + "' was not in the accepted worlds list.");
@@ -44,7 +45,8 @@ public class RemoveWorldCommand implements SubCommand {
 
     public List<String> onTabComplete(CommandSender sender, String[] args) {
         if (args.length == 2) {
-            return dataManager.getAcceptedWorldNames().stream()
+            return dataManager.getAll(WorldData.class).stream()
+                    .map(WorldData::getWorldName)
                     .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
                     .sorted()
                     .collect(Collectors.toList());

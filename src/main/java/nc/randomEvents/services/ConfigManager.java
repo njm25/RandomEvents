@@ -11,7 +11,16 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.logging.Logger;
 
-public class ConfigManager {
+interface IConfigManager {
+    void reload();
+    void setDefaults();
+    <T> T getConfigValue(String eventName, String key);
+    Integer getIntValue(String eventName, String key);
+    Double getDoubleValue(String eventName, String key);
+    ConfigurationSection getEventConfig(BaseEvent event);
+}
+
+public class ConfigManager implements IConfigManager {
     private final RandomEvents plugin;
     private final Logger logger;
     private File configFile;

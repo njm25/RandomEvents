@@ -8,7 +8,6 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.projectiles.ProjectileSource;
@@ -16,7 +15,20 @@ import org.bukkit.util.Vector;
 
 import java.util.*;
 
-public class ProjectileManager implements Listener, SessionParticipant {
+interface IProjectileManager {
+    <T extends Projectile> T spawnTracked
+    (
+        Class<T> type, 
+        Location location, 
+        Vector direction, 
+        ProjectileSource shooter, 
+        UUID sessionId, 
+        Double damage, 
+        double speed
+    );
+}
+
+public class ProjectileManager implements SessionParticipant, IProjectileManager {
     private final RandomEvents plugin;
     private final SessionRegistry sessionRegistry;
     private static final String PROJECTILE_KEY = "event_projectile";
@@ -27,7 +39,6 @@ public class ProjectileManager implements Listener, SessionParticipant {
     public ProjectileManager(RandomEvents plugin) {
         this.plugin = plugin;
         this.sessionRegistry = plugin.getSessionRegistry();
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
         plugin.getSessionRegistry().registerParticipant(this);
         plugin.getLogger().info("ProjectileManager initialized");
     }

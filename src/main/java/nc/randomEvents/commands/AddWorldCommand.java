@@ -1,6 +1,7 @@
 package nc.randomEvents.commands;
 
 import nc.randomEvents.RandomEvents;
+import nc.randomEvents.data.WorldData;
 import nc.randomEvents.services.DataManager;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
@@ -36,10 +37,15 @@ public class AddWorldCommand implements SubCommand {
             return true;
         }
 
-        if (dataManager.addAcceptedWorld(world.getName())) {
-            sender.sendMessage("World '" + world.getName() + "' added to accepted worlds.");
+        String actualWorldName = world.getName();
+        WorldData existing = dataManager.get(WorldData.class, actualWorldName);
+        
+        if (existing != null) {
+            sender.sendMessage("World '" + actualWorldName + "' is already in the accepted worlds list.");
         } else {
-            sender.sendMessage("World '" + world.getName() + "' is already in the accepted worlds list.");
+            WorldData worldData = new WorldData(actualWorldName);
+            dataManager.set(actualWorldName, worldData);
+            sender.sendMessage("World '" + actualWorldName + "' added to accepted worlds.");
         }
         return true;
     }
@@ -51,7 +57,9 @@ public class AddWorldCommand implements SubCommand {
 
     public List<String> onTabComplete(CommandSender sender, String[] args) {
         if (args.length == 2) {
-            List<String> currentWorlds = dataManager.getAcceptedWorldNames();
+            List<String> currentWorlds = dataManager.getAll(WorldData.class).stream()
+                    .map(WorldData::getWorldName)
+                    .collect(Collectors.toList());
             return Bukkit.getWorlds().stream()
                     .map(World::getName)
                     .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))

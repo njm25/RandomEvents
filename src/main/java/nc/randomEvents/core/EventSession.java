@@ -4,13 +4,23 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
 import nc.randomEvents.RandomEvents;
+import nc.randomEvents.data.PlayerData;
+import nc.randomEvents.services.DataManager;
 
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-public class EventSession {
+interface IEventSession {
+    void start();
+    void end();
+    UUID getSessionId();
+    Set<Player> getPlayers();
+    BaseEvent getEvent();
+}
+
+public class EventSession implements IEventSession {
     private final UUID sessionId;
     private final BaseEvent event;
     private final Set<Player> players;
@@ -18,13 +28,14 @@ public class EventSession {
     private BukkitTask tickTask;
     private BukkitTask endTask;
     private boolean isEnded = false;
+    private final DataManager dataManager;
     
     public EventSession(RandomEvents plugin, BaseEvent event, Set<Player> players) {
         this.sessionId = UUID.randomUUID();
         this.plugin = plugin;
         this.event = event;
         this.players = new HashSet<>(players);
-
+        this.dataManager = plugin.getDataManager();
         start();
     }
     
@@ -86,6 +97,14 @@ public class EventSession {
         // End the event
         event.onEnd(sessionId, getPlayers());
         plugin.getSessionRegistry().unregisterSession(sessionId);
+
+        for (Player player : getPlayers()) {
+            PlayerData playerData = dataManager.get(PlayerData.class, player.getUniqueId().toString());
+            if (playerData != null) {
+                playerData.eventsParticipated++;
+                dataManager.set(playerData.getId(), playerData);
+            }
+        }
     }
     
     /**

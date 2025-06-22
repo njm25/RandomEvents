@@ -7,12 +7,15 @@ import nc.randomEvents.services.SessionRegistry;
 import nc.randomEvents.utils.PersistentDataHelper;
 import org.bukkit.*;
 import org.bukkit.entity.*;
-import org.bukkit.event.Listener;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.*;
 
-public class EntityManager implements Listener, SessionParticipant {
+interface IEntityManager {
+    <T extends Entity> T spawnTracked(EntityType type, Location location, String entityId, UUID sessionId);
+}
+
+public class EntityManager implements SessionParticipant, IEntityManager {
     private final RandomEvents plugin;
     private static final String ENTITY_KEY = "entity";
     private static final String ENTITY_ID_KEY = "entity_id";
@@ -23,7 +26,6 @@ public class EntityManager implements Listener, SessionParticipant {
     public EntityManager(RandomEvents plugin) {
         this.plugin = plugin;
         this.sessionRegistry = plugin.getSessionRegistry();
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
         plugin.getSessionRegistry().registerParticipant(this);
         plugin.getLogger().info("EntityManager initialized");
     }
