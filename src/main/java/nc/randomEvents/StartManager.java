@@ -39,7 +39,7 @@ public class StartManager {
         plugin.setEntityManager(new EntityManager(plugin));
         plugin.setProjectileManager(new ProjectileManager(plugin));
         plugin.setContainerManager(new ContainerManager(plugin));
-        new PlayerListener(plugin);
+        plugin.setPlayerListener(new PlayerListener(plugin));
 
         // Third layer: Event system that coordinates everything
         plugin.setEventManager(new EventManager(plugin));

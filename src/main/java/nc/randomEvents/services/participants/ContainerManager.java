@@ -42,14 +42,14 @@ public class ContainerManager implements SessionParticipant, IContainerManager {
     
     // Track containers by session
     private final Map<UUID, Set<Location>> sessionContainers = new ConcurrentHashMap<>();
-
+    private ContainerListener containerListener;
     public ContainerManager(RandomEvents plugin) {
         this.plugin = plugin;
         this.sessionRegistry = plugin.getSessionRegistry();
         plugin.getSessionRegistry().registerParticipant(this);
-        
+        containerListener = new ContainerListener(plugin);
+        containerListener.registerListener(plugin);
         // Initialize the behavior manager (it handles its own events)
-        new ContainerListener(plugin);
         
         plugin.getLogger().info("ContainerManager initialized");
     }
@@ -233,7 +233,8 @@ public class ContainerManager implements SessionParticipant, IContainerManager {
         }
 
         // Clean up quest items in player inventories
-        for (Player player : plugin.getServer().getOnlinePlayers()) {
+        Set<Player> players = session.getPlayers();
+        for (Player player : players) {
             // Clean main inventory
             for (ItemStack item : player.getInventory().getContents()) {
                 if (item != null && isQuestItem(item, sessionId)) {
@@ -256,6 +257,7 @@ public class ContainerManager implements SessionParticipant, IContainerManager {
             }
 
             // Clean cursor
+            player.updateInventory(); // triggers sync from client
             ItemStack cursorItem = player.getItemOnCursor();
             if (cursorItem != null && isQuestItem(cursorItem, sessionId)) {
                 player.setItemOnCursor(null);

@@ -1,31 +1,32 @@
 package nc.randomEvents.listeners;
 
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 import org.bukkit.entity.Entity;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.persistence.PersistentDataType;
 
 import nc.randomEvents.RandomEvents;
+import nc.randomEvents.core.ServiceListener;
 import nc.randomEvents.services.SessionRegistry;
 import nc.randomEvents.utils.PersistentDataHelper;
 
-public class EntityListener implements Listener {
+public class EntityListener implements ServiceListener {
     private final SessionRegistry sessionRegistry;
     private final RandomEvents plugin;
-    private final Map<UUID, Set<UUID>> sessionEntities;
     private static final String ENTITY_KEY = "entity";
     private static final String ENTITY_SESSION_KEY = "entity_session";
 
     public EntityListener(RandomEvents plugin) {
         this.sessionRegistry = plugin.getSessionRegistry();
         this.plugin = plugin;
-        this.sessionEntities = plugin.getEntityManager().getSessionEntities();
+    }
+
+    @Override
+    public void registerListener(RandomEvents plugin) {
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
@@ -35,7 +36,7 @@ public class EntityListener implements Listener {
         if (isSessionEntity(entity)) {
             UUID sessionId = getEntitySessionId(entity);
             if (sessionId != null) {
-                Set<UUID> entities = sessionEntities.get(sessionId);
+                Set<UUID> entities = plugin.getEntityManager().getSessionEntities().get(sessionId);
                 if (entities != null) {
                     entities.remove(entity.getUniqueId());
                 }

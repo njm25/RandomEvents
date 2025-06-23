@@ -2,13 +2,12 @@ package nc.randomEvents.services.participants;
 
 import nc.randomEvents.RandomEvents;    
 import nc.randomEvents.core.SessionParticipant;
+import nc.randomEvents.listeners.ProjectileListener;
 import nc.randomEvents.services.SessionRegistry;
 import nc.randomEvents.utils.PersistentDataHelper;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.*;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.util.Vector;
@@ -35,11 +34,14 @@ public class ProjectileManager implements SessionParticipant, IProjectileManager
     private static final String PROJECTILE_DAMAGE_KEY = "projectile_damage";
     private static final String PROJECTILE_SESSION_KEY = "projectile_session";
     private final Map<UUID, Set<UUID>> sessionProjectiles = new HashMap<>();
-
+    private ProjectileListener projectileListener;
     public ProjectileManager(RandomEvents plugin) {
         this.plugin = plugin;
         this.sessionRegistry = plugin.getSessionRegistry();
         plugin.getSessionRegistry().registerParticipant(this);
+        
+        projectileListener = new ProjectileListener(plugin);
+        projectileListener.registerListener(plugin);
         plugin.getLogger().info("ProjectileManager initialized");
     }
 
@@ -127,20 +129,4 @@ public class ProjectileManager implements SessionParticipant, IProjectileManager
         return storedSessionId != null && storedSessionId.equals(sessionId.toString());
     }
 
-    @EventHandler
-    public void onEntityDamage(EntityDamageByEntityEvent event) {
-        Entity damager = event.getDamager();
-        
-        // Check if it's one of our tracked projectiles
-        if (damager instanceof Projectile && 
-            PersistentDataHelper.has(damager.getPersistentDataContainer(), plugin, PROJECTILE_KEY, PersistentDataType.BYTE)) {
-            
-            // Check for custom damage
-            Double customDamage = PersistentDataHelper.get(damager.getPersistentDataContainer(), plugin, 
-                                                         PROJECTILE_DAMAGE_KEY, PersistentDataType.DOUBLE);
-            if (customDamage != null) {
-                event.setDamage(customDamage);
-            }
-        }
-    }
 } 

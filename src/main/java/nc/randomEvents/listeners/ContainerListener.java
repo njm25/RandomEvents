@@ -3,6 +3,7 @@ package nc.randomEvents.listeners;
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.core.LootContainer;
 import nc.randomEvents.core.LootContainer.ContainerType;
+import nc.randomEvents.core.ServiceListener;
 import nc.randomEvents.utils.PersistentDataHelper;
 import nc.randomEvents.utils.SoundHelper;
 import net.kyori.adventure.text.Component;
@@ -23,7 +24,7 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.util.UUID;
 
-public class ContainerListener implements Listener {
+public class ContainerListener implements ServiceListener {
 	private final RandomEvents plugin;
 	private static final String CONTAINER_KEY = "container";
 	private static final String CONTAINER_ID_KEY = "container_id";
@@ -33,6 +34,10 @@ public class ContainerListener implements Listener {
 
 	public ContainerListener(RandomEvents plugin) {
 		this.plugin = plugin;
+	}
+
+	@Override
+	public void registerListener(RandomEvents plugin) {
 		plugin.getServer().getPluginManager().registerEvents(this, plugin);
 	}
 

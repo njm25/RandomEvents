@@ -93,7 +93,7 @@ public class EventSession implements IEventSession {
             endTask.cancel();
             endTask = null;
         }
-        
+
         // End the event
         event.onEnd(sessionId, getPlayers());
         plugin.getSessionRegistry().unregisterSession(sessionId);

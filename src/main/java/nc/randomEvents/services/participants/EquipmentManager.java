@@ -2,6 +2,7 @@ package nc.randomEvents.services.participants;
 
 import nc.randomEvents.RandomEvents;
 import nc.randomEvents.core.SessionParticipant;
+import nc.randomEvents.listeners.EquipmentListener;
 import nc.randomEvents.services.SessionRegistry;
 import nc.randomEvents.utils.ItemHelper;
 import nc.randomEvents.utils.PersistentDataHelper;
@@ -10,12 +11,6 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.block.*;
 import org.bukkit.entity.*;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.block.Action;
-import org.bukkit.event.entity.EntityPickupItemEvent;
-import org.bukkit.event.entity.ItemSpawnEvent;
-import org.bukkit.event.inventory.*;
-import org.bukkit.event.player.*;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BlockStateMeta;
@@ -27,7 +22,6 @@ import java.util.*;
 interface IEquipmentManager {
     void giveEquipment(Player player, ItemStack item, String equipmentId, UUID sessionId);
     void giveFullKit(Player player, Map<Integer, ItemStack> kit, String kitId, UUID sessionId);
-    void handlePlayerJoinSession(Player player, UUID sessionId);
 }
 
 public class EquipmentManager implements SessionParticipant, IEquipmentManager {
@@ -36,11 +30,12 @@ public class EquipmentManager implements SessionParticipant, IEquipmentManager {
     private static final String EQUIPMENT_ID_KEY = "equipment_id";
     private static final String EQUIPMENT_SESSION_KEY = "equipment_session";
     private final SessionRegistry sessionRegistry;
+    private EquipmentListener equipmentListener;
     
     // Map to store stripped inventories: sessionId -> (playerUUID -> StoredInventory)
     private final Map<UUID, Map<UUID, StoredInventory>> strippedInventories = new HashMap<>();
 
-    private static class StoredInventory {
+    public static class StoredInventory {
         private final ItemStack[] inventory;
         private final ItemStack[] armor;
         private final ItemStack offhand;
@@ -111,6 +106,8 @@ public class EquipmentManager implements SessionParticipant, IEquipmentManager {
         this.plugin = plugin;
         this.sessionRegistry = plugin.getSessionRegistry();
         plugin.getSessionRegistry().registerParticipant(this);
+        equipmentListener = new EquipmentListener(plugin);
+        equipmentListener.registerListener(plugin);
         plugin.getLogger().info("EquipmentManager initialized");
     }
 
@@ -220,7 +217,7 @@ public class EquipmentManager implements SessionParticipant, IEquipmentManager {
      * @param item The item to check
      * @return true if the item is event equipment
      */
-    private boolean isEventEquipment(ItemStack item) {
+    public static boolean isEventEquipment(ItemStack item, RandomEvents plugin) {
         if (item == null || !item.hasItemMeta()) return false;
         
         ItemMeta meta = item.getItemMeta();
@@ -234,7 +231,7 @@ public class EquipmentManager implements SessionParticipant, IEquipmentManager {
      * @param item The item to check
      * @return The session ID, or null if not an event item
      */
-    private UUID getEventSessionId(ItemStack item) {
+    public UUID getEventSessionId(ItemStack item) {
         if (item == null || !item.hasItemMeta()) return null;
         
         ItemMeta meta = item.getItemMeta();
@@ -288,17 +285,17 @@ public class EquipmentManager implements SessionParticipant, IEquipmentManager {
             }
         }
         // Clean up items in player inventories
-        for (Player player : plugin.getServer().getOnlinePlayers()) {
+        Set<Player> players = sessionRegistry.getSession(sessionId).getPlayers();
+        for (Player player : players) {
             cleanupPlayerInventory(player, sessionId);
-            
             // Check player's cursor
+            player.updateInventory(); // triggers sync from client
             ItemStack cursorItem = player.getItemOnCursor();
             if (cursorItem != null) {
-                UUID cursorSessionId = getEventSessionId(cursorItem);
-                if (cursorSessionId != null && cursorSessionId.equals(sessionId)) {
+                if (isEventEquipment(cursorItem, sessionId)) {
                     player.setItemOnCursor(null);
                 } else if (cursorItem.getType().name().contains("SHULKER_BOX")) {
-                    cleanupShulkerBox(cursorItem, cursorSessionId);
+                    cleanupShulkerBox(cursorItem, sessionId);
                 }
             }
 
@@ -504,7 +501,7 @@ public class EquipmentManager implements SessionParticipant, IEquipmentManager {
         }
     }
 
-    private void cleanupShulkerBox(ItemStack shulkerBox, UUID sessionId) {
+    public void cleanupShulkerBox(ItemStack shulkerBox, UUID sessionId) {
         if (shulkerBox.getItemMeta() instanceof BlockStateMeta) {
             BlockStateMeta meta = (BlockStateMeta) shulkerBox.getItemMeta();
             if (meta.getBlockState() instanceof ShulkerBox) {
@@ -526,7 +523,7 @@ public class EquipmentManager implements SessionParticipant, IEquipmentManager {
      * @param player The player to clean up
      * @param sessionId The session ID to clean up
      */
-    private void cleanupPlayerInventory(Player player, UUID sessionId) {
+    public void cleanupPlayerInventory(Player player, UUID sessionId) {
         // Clean main inventory
         for (ItemStack item : player.getInventory().getContents()) {
             if (item != null) {
@@ -571,270 +568,8 @@ public class EquipmentManager implements SessionParticipant, IEquipmentManager {
             }
         }
     }
-    // Event Listeners for Item Interactions
 
-    @EventHandler
-    public void onItemPickup(EntityPickupItemEvent event) {
-        if (!(event.getEntity() instanceof Player)) return;
-        
-        ItemStack item = event.getItem().getItemStack();
-        UUID sessionId = getEventSessionId(item);
-        
-        if (sessionId != null && !plugin.getSessionRegistry().isActive(sessionId)) {
-            event.setCancelled(true);
-            event.getItem().remove();
-        }
-    }
-
-    @EventHandler
-    public void onItemSpawn(ItemSpawnEvent event) {
-        // If it's not event equipment, allow it
-        if (!isEventEquipment(event.getEntity().getItemStack())) {
-            return;
-        }
-        
-        // Allow drops from inventory overflow (which have a default pickup delay)
-        // and player drops (which have a thrower)
-        if (event.getEntity().getPickupDelay() == 10 || event.getEntity().getThrower() != null) {
-            return;
-        }
-        
-        // Cancel other event item spawns
-        event.setCancelled(true);
-    }
-
-    @EventHandler
-    public void onPlayerInteract(PlayerInteractEvent event) {
-        if (event.getItem() != null && isEventEquipment(event.getItem())) {
-            // Only cancel specific block interactions
-            if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-                Block block = event.getClickedBlock();
-                if (block != null) {
-                    Material type = block.getType();
-                    if (type == Material.COMPOSTER ||
-                        type == Material.CAMPFIRE ||
-                        type == Material.SOUL_CAMPFIRE ||
-                        type == Material.LECTERN ||
-                        type == Material.JUKEBOX) {
-                        event.setCancelled(true);
-                    }
-                }
-            }
-        }
-    }
-
-    @EventHandler
-    public void onInventoryDrag(InventoryDragEvent event) {
-        if (!(event.getWhoClicked() instanceof Player)) return;
-        
-        ItemStack draggedItem = event.getOldCursor();
-        Inventory topInventory = event.getView().getTopInventory();
-        
-        // If we have an event item being dragged
-        if (draggedItem != null && isEventEquipment(draggedItem)) {
-            // Check if any of the slots being dragged to are in the top inventory
-            for (int slot : event.getRawSlots()) {
-                if (slot < topInventory.getSize()) {
-                    event.setCancelled(true);
-                    return;
-                }
-            }
-        }
-    }
-
-    @EventHandler
-    public void onPlayerDropItem(PlayerDropItemEvent event) {
-        // Allow dropping event items
-        // No cancellation needed
-    }
-
-    @EventHandler
-    public void onInventoryClose(InventoryCloseEvent event) {
-        if (!(event.getPlayer() instanceof Player)) return;
-        
-        Player player = (Player) event.getPlayer();
-        Inventory topInventory = event.getView().getTopInventory();
-        
-        // Check top inventory for any event items that might have slipped through
-        if (topInventory != null) {
-            for (ItemStack item : topInventory.getContents()) {
-                if (item != null && isEventEquipment(item)) {
-                    topInventory.remove(item);
-                    player.getWorld().dropItemNaturally(player.getLocation(), item);
-                }
-            }
-        }
-    }
-
-    @EventHandler
-    public void onPlayerQuit(PlayerQuitEvent event) {
-        Player player = event.getPlayer();
-        
-        // Check cursor item
-        ItemStack cursorItem = player.getItemOnCursor();
-        if (cursorItem != null) {
-            UUID cursorSessionId = getEventSessionId(cursorItem);
-            if (cursorSessionId != null && !plugin.getSessionRegistry().isActive(cursorSessionId)) {
-                player.setItemOnCursor(null);
-            } else if (cursorItem.getType().name().contains("SHULKER_BOX")) {
-                cleanupShulkerBox(cursorItem, cursorSessionId);
-            }
-        }
-        
-        // Handle inventory restoration if player leaves during a session
-        for (Map.Entry<UUID, Map<UUID, StoredInventory>> sessionEntry : strippedInventories.entrySet()) {
-            UUID sessionId = sessionEntry.getKey();
-            Map<UUID, StoredInventory> sessionInventories = sessionEntry.getValue();
-            
-            StoredInventory storedInventory = sessionInventories.get(player.getUniqueId());
-            if (storedInventory != null) {
-                // Clean any event items
-                cleanupPlayerInventory(player, sessionId);
-                
-                // Restore their inventory
-                storedInventory.restore(player);
-                sessionInventories.remove(player.getUniqueId());
-                
-                plugin.getLogger().info("Restored inventory for player " + player.getName() + " who left during session " + sessionId);
-            }
-        }
-    }
-
-    @EventHandler
-    public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
-        if (!(event.getPlayer().getInventory().getItemInMainHand() != null && 
-              isEventEquipment(event.getPlayer().getInventory().getItemInMainHand())) &&
-            !(event.getPlayer().getInventory().getItemInOffHand() != null && 
-              isEventEquipment(event.getPlayer().getInventory().getItemInOffHand()))) {
-            return; // No event items in either hand, allow interaction
-        }
-
-        // Only cancel specific entity interactions
-        if (event.getRightClicked() instanceof ArmorStand ||
-            event.getRightClicked() instanceof ItemFrame) {
-            event.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void onHopperPickup(InventoryPickupItemEvent event) {
-        ItemStack item = event.getItem().getItemStack();
-        if (isEventEquipment(item)) {
-            event.setCancelled(true);
-            event.getItem().remove(); // Delete the item instead of just cancelling
-            plugin.getLogger().info("Deleted event item attempted to be picked up by hopper: " + item.getType());
-        }
-    }
-
-    @EventHandler
-    public void onHopperTransfer(InventoryMoveItemEvent event) {
-        ItemStack item = event.getItem();
-        if (isEventEquipment(item)) {
-            event.setCancelled(true);
-            // Find and remove the item from the source inventory
-            Inventory source = event.getSource();
-            source.remove(item);
-            plugin.getLogger().info("Deleted event item attempted to be transferred by hopper: " + item.getType());
-        }
-    }
-
-    @EventHandler
-    public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player)) return;
-        
-        Player player = (Player) event.getWhoClicked();
-        ItemStack clickedItem = event.getCurrentItem();
-        ItemStack cursorItem = event.getCursor();
-        Inventory clickedInventory = event.getClickedInventory();
-        
-        // Handle shift-clicking
-        if (event.isShiftClick()) {
-            if (clickedItem != null && isEventEquipment(clickedItem)) {
-                if (clickedInventory == player.getInventory() && event.getView().getType() == InventoryType.CRAFTING) {
-                    return;
-                }
-                Inventory destinationInventory = (clickedInventory == player.getInventory()) ? 
-                    event.getView().getTopInventory() : player.getInventory();
-                
-                // Only allow if destination is player inventory
-                if (destinationInventory != player.getInventory()) {
-                    event.setCancelled(true);
-                }
-                return;
-            }
-        }
-        
-        // Handle number key clicks (1-9) and drops
-        if (event.getClick() == ClickType.NUMBER_KEY || 
-            event.getClick() == ClickType.DROP || 
-            event.getClick() == ClickType.CONTROL_DROP) {
-            
-            if (clickedItem != null && isEventEquipment(clickedItem)) {
-                // For number key clicks and drops, check if the destination is the player's inventory
-                Inventory destinationInventory = (clickedInventory == player.getInventory()) ? 
-                    event.getView().getTopInventory() : player.getInventory();
-                
-                // Cancel if destination is not player's inventory
-                if (destinationInventory != player.getInventory()) {
-                    event.setCancelled(true);
-                }
-                return;
-            }
-        }
-        
-        // Handle even splits and drag-splits
-        if (cursorItem != null && isEventEquipment(cursorItem)) {
-            // If we're in a crafting table or other container
-            if (event.getView().getType() != InventoryType.CRAFTING) {
-                // Only allow splits within the player inventory
-                if (clickedInventory != player.getInventory()) {
-                    event.setCancelled(true);
-                    return;
-                }
-            }
-        }
-        
-        // If clicking on an event item
-        if (clickedItem != null && isEventEquipment(clickedItem)) {
-            // Only allow if it's in player's own inventory
-            if (clickedInventory == player.getInventory()) {
-                return; // Allow the click
-            }
-            event.setCancelled(true);
-            return;
-        }
-    }
-
-    @EventHandler
-    public void onPlayerArmorStandManipulate(PlayerArmorStandManipulateEvent event) {
-        // Block any armor stand manipulation with event items
-        if (isEventEquipment(event.getPlayerItem())) {
-            event.setCancelled(true);
-        }
-    }
-
-    /**
-     * Handles stripping inventory for a player joining an active session
-     * @param player The player joining
-     * @param sessionId The session they're joining
-     */
-    public void handlePlayerJoinSession(Player player, UUID sessionId) {
-        if (!sessionRegistry.getSession(sessionId).getEvent().stripsInventory()) {
-            return;
-        }
-        
-        Map<UUID, StoredInventory> sessionInventories = strippedInventories.get(sessionId);
-        if (sessionInventories == null) {
-            sessionInventories = new HashMap<>();
-            strippedInventories.put(sessionId, sessionInventories);
-        }
-        
-        // Store and clear their inventory
-        sessionInventories.put(player.getUniqueId(), new StoredInventory(player));
-        player.getInventory().clear();
-        player.getInventory().setArmorContents(null);
-        player.getInventory().setItemInOffHand(null);
-        
-        player.sendMessage(Component.text("[Event] Your inventory has been temporarily stored for this event.").color(NamedTextColor.GOLD));
+    public Map<UUID, Map<UUID, StoredInventory>> getStrippedInventories() {
+        return strippedInventories;
     }
 } 

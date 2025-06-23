@@ -11,11 +11,13 @@ import nc.randomEvents.RandomEvents;
 public class BlockManager implements SessionParticipant {
     private final SessionRegistry sessionRegistry;
     private final RandomEvents plugin;
+    private BlockListener blockListener;
     public BlockManager(RandomEvents plugin) {
         this.plugin = plugin;
         this.sessionRegistry = plugin.getSessionRegistry(); 
         this.sessionRegistry.registerParticipant(this);
-        new BlockListener(plugin);
+        blockListener = new BlockListener(plugin);
+        blockListener.registerListener(plugin);
     }
 
     @Override
