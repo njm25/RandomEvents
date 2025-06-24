@@ -60,30 +60,63 @@ public class ContainerListener implements ServiceListener {
 	@EventHandler
 	public void onChunkLoad(ChunkLoadEvent event) {
 		for (BlockState blockState : event.getChunk().getTileEntities()) {
-			if (!(blockState instanceof Container container)) continue;
-			Block block = container.getBlock();
+			Block block = blockState.getBlock();
 
 			if (!isEventContainer(block)) continue;
+
+			// Defensive: Remove if not a container
+			if (!(block.getState() instanceof Container container)) {
+				block.setType(Material.AIR);
+				plugin.getLogger().info("Removed glitched event container (not a container block) at " + block.getLocation());
+				continue;
+			}
 
 			UUID sessionId = getEventSessionId(block);
 			ContainerType type = getContainerType(block);
 			String containerId = PersistentDataHelper.get(container.getPersistentDataContainer(), plugin, CONTAINER_ID_KEY, PersistentDataType.STRING);
+			Byte clearAtEndByte = PersistentDataHelper.get(container.getPersistentDataContainer(), plugin, CLEAR_AT_END_KEY, PersistentDataType.BYTE);
+			boolean clearAtEnd = clearAtEndByte != null && clearAtEndByte == 1;
+
+			// Remove if missing critical tags
 			if (sessionId == null || type == null || containerId == null) {
 				block.setType(Material.AIR);
+				plugin.getLogger().info("Removed glitched event container (missing tags) at " + block.getLocation());
+				continue;
+			}
+
+			// Remove if clearAtEnd=true and session is no longer active
+			if (clearAtEnd && !plugin.getSessionRegistry().isSessionActive(sessionId)) {
+				block.setType(Material.AIR);
+				plugin.getLogger().info("Cleaned up stale event container at " + block.getLocation());
 				continue;
 			}
 
 			if (plugin.getContainerManager().isRegistered(block.getLocation(), sessionId)) continue;
 
-			// Attempt recovery
-			boolean clearAtEnd = true;
-			Byte b = PersistentDataHelper.get(container.getPersistentDataContainer(), plugin, CLEAR_AT_END_KEY, PersistentDataType.BYTE);
-			if (b != null) clearAtEnd = b == 1;
+			// Validate/fix tags if needed
+			boolean needsUpdate = false;
+			Byte tag = PersistentDataHelper.get(container.getPersistentDataContainer(), plugin, CONTAINER_KEY, PersistentDataType.BYTE);
+			if (tag == null || tag != 1) needsUpdate = true;
+			String id = PersistentDataHelper.get(container.getPersistentDataContainer(), plugin, CONTAINER_ID_KEY, PersistentDataType.STRING);
+			if (id == null || !id.equals(containerId)) needsUpdate = true;
+			String sess = PersistentDataHelper.get(container.getPersistentDataContainer(), plugin, CONTAINER_SESSION_KEY, PersistentDataType.STRING);
+			if (sess == null || !sess.equals(sessionId.toString())) needsUpdate = true;
+			String t = PersistentDataHelper.get(container.getPersistentDataContainer(), plugin, CONTAINER_TYPE_KEY, PersistentDataType.STRING);
+			if (t == null || !t.equals(type.name())) needsUpdate = true;
+			Byte clear = PersistentDataHelper.get(container.getPersistentDataContainer(), plugin, CLEAR_AT_END_KEY, PersistentDataType.BYTE);
+			if (clear == null || (clearAtEnd ? clear != 1 : clear != 0)) needsUpdate = true;
 
-			// Create a new container to recover the existing one
-			LootContainer lootContainer = plugin.getContainerManager().createContainer(block.getLocation(), sessionId, type, clearAtEnd);
-			lootContainer.spawn(); // This will re-tag and register the container
-			plugin.getLogger().info("Recovered event container at " + block.getLocation());
+			if (needsUpdate) {
+				PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CONTAINER_KEY, PersistentDataType.BYTE, (byte) 1);
+				PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CONTAINER_ID_KEY, PersistentDataType.STRING, containerId);
+				PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CONTAINER_SESSION_KEY, PersistentDataType.STRING, sessionId.toString());
+				PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CONTAINER_TYPE_KEY, PersistentDataType.STRING, type.name());
+				PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CLEAR_AT_END_KEY, PersistentDataType.BYTE, (byte) (clearAtEnd ? 1 : 0));
+				container.update();
+				plugin.getLogger().info("Fixed missing/corrupt tags for event container at " + block.getLocation());
+			}
+			plugin.getContainerManager().registerContainer(block.getLocation(), sessionId);
+			plugin.getLogger().info("Re-registered event container at " + block.getLocation());
 		}
 	}
 
