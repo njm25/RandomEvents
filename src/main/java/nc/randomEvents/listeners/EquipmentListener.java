@@ -326,7 +326,6 @@ public class EquipmentListener implements ServiceListener {
     public void onInventoryCloseCheck(InventoryCloseEvent event) {
         if (!(event.getPlayer() instanceof Player)) return;
         
-        Player player = (Player) event.getPlayer();
         Inventory topInventory = event.getView().getTopInventory();
         
         // Check top inventory for any event items with inactive sessions
