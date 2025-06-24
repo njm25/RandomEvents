@@ -85,7 +85,7 @@ public class ContainerListener implements ServiceListener {
 			}
 
 			// Remove if clearAtEnd=true and session is no longer active
-			if (clearAtEnd && !plugin.getSessionRegistry().isSessionActive(sessionId)) {
+			if (clearAtEnd && !plugin.getSessionRegistry().isActive(sessionId)) {
 				block.setType(Material.AIR);
 				plugin.getLogger().info("Cleaned up stale event container at " + block.getLocation());
 				continue;
