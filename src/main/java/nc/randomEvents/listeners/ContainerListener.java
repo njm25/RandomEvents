@@ -1,7 +1,6 @@
 package nc.randomEvents.listeners;
 
 import nc.randomEvents.RandomEvents;
-import nc.randomEvents.core.LootContainer;
 import nc.randomEvents.core.LootContainer.ContainerType;
 import nc.randomEvents.core.ServiceListener;
 import nc.randomEvents.utils.PersistentDataHelper;
