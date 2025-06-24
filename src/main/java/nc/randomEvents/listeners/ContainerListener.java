@@ -92,28 +92,7 @@ public class ContainerListener implements ServiceListener {
 
 			if (plugin.getContainerManager().isRegistered(block.getLocation(), sessionId)) continue;
 
-			// Validate/fix tags if needed
-			boolean needsUpdate = false;
-			Byte tag = PersistentDataHelper.get(container.getPersistentDataContainer(), plugin, CONTAINER_KEY, PersistentDataType.BYTE);
-			if (tag == null || tag != 1) needsUpdate = true;
-			String id = PersistentDataHelper.get(container.getPersistentDataContainer(), plugin, CONTAINER_ID_KEY, PersistentDataType.STRING);
-			if (id == null || !id.equals(containerId)) needsUpdate = true;
-			String sess = PersistentDataHelper.get(container.getPersistentDataContainer(), plugin, CONTAINER_SESSION_KEY, PersistentDataType.STRING);
-			if (sess == null || !sess.equals(sessionId.toString())) needsUpdate = true;
-			String t = PersistentDataHelper.get(container.getPersistentDataContainer(), plugin, CONTAINER_TYPE_KEY, PersistentDataType.STRING);
-			if (t == null || !t.equals(type.name())) needsUpdate = true;
-			Byte clear = PersistentDataHelper.get(container.getPersistentDataContainer(), plugin, CLEAR_AT_END_KEY, PersistentDataType.BYTE);
-			if (clear == null || (clearAtEnd ? clear != 1 : clear != 0)) needsUpdate = true;
-
-			if (needsUpdate) {
-				PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CONTAINER_KEY, PersistentDataType.BYTE, (byte) 1);
-				PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CONTAINER_ID_KEY, PersistentDataType.STRING, containerId);
-				PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CONTAINER_SESSION_KEY, PersistentDataType.STRING, sessionId.toString());
-				PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CONTAINER_TYPE_KEY, PersistentDataType.STRING, type.name());
-				PersistentDataHelper.set(container.getPersistentDataContainer(), plugin, CLEAR_AT_END_KEY, PersistentDataType.BYTE, (byte) (clearAtEnd ? 1 : 0));
-				container.update();
-				plugin.getLogger().info("Fixed missing/corrupt tags for event container at " + block.getLocation());
-			}
+			
 			plugin.getContainerManager().registerContainer(block.getLocation(), sessionId);
 			plugin.getLogger().info("Re-registered event container at " + block.getLocation());
 		}
