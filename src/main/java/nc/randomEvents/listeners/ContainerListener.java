@@ -1,7 +1,6 @@
 package nc.randomEvents.listeners;
 
 import nc.randomEvents.RandomEvents;
-import nc.randomEvents.core.LootContainer;
 import nc.randomEvents.core.LootContainer.ContainerType;
 import nc.randomEvents.core.ServiceListener;
 import nc.randomEvents.utils.PersistentDataHelper;
@@ -60,30 +59,42 @@ public class ContainerListener implements ServiceListener {
 	@EventHandler
 	public void onChunkLoad(ChunkLoadEvent event) {
 		for (BlockState blockState : event.getChunk().getTileEntities()) {
-			if (!(blockState instanceof Container container)) continue;
-			Block block = container.getBlock();
+			Block block = blockState.getBlock();
 
 			if (!isEventContainer(block)) continue;
+
+			// Defensive: Remove if not a container
+			if (!(block.getState() instanceof Container container)) {
+				block.setType(Material.AIR);
+				plugin.getLogger().info("Removed glitched event container (not a container block) at " + block.getLocation());
+				continue;
+			}
 
 			UUID sessionId = getEventSessionId(block);
 			ContainerType type = getContainerType(block);
 			String containerId = PersistentDataHelper.get(container.getPersistentDataContainer(), plugin, CONTAINER_ID_KEY, PersistentDataType.STRING);
+			Byte clearAtEndByte = PersistentDataHelper.get(container.getPersistentDataContainer(), plugin, CLEAR_AT_END_KEY, PersistentDataType.BYTE);
+			boolean clearAtEnd = clearAtEndByte != null && clearAtEndByte == 1;
+
+			// Remove if missing critical tags
 			if (sessionId == null || type == null || containerId == null) {
 				block.setType(Material.AIR);
+				plugin.getLogger().info("Removed glitched event container (missing tags) at " + block.getLocation());
+				continue;
+			}
+
+			// Remove if clearAtEnd=true and session is no longer active
+			if (clearAtEnd && !plugin.getSessionRegistry().isActive(sessionId)) {
+				block.setType(Material.AIR);
+				plugin.getLogger().info("Cleaned up stale event container at " + block.getLocation());
 				continue;
 			}
 
 			if (plugin.getContainerManager().isRegistered(block.getLocation(), sessionId)) continue;
 
-			// Attempt recovery
-			boolean clearAtEnd = true;
-			Byte b = PersistentDataHelper.get(container.getPersistentDataContainer(), plugin, CLEAR_AT_END_KEY, PersistentDataType.BYTE);
-			if (b != null) clearAtEnd = b == 1;
-
-			// Create a new container to recover the existing one
-			LootContainer lootContainer = plugin.getContainerManager().createContainer(block.getLocation(), sessionId, type, clearAtEnd);
-			lootContainer.spawn(); // This will re-tag and register the container
-			plugin.getLogger().info("Recovered event container at " + block.getLocation());
+			
+			plugin.getContainerManager().registerContainer(block.getLocation(), sessionId);
+			plugin.getLogger().info("Re-registered event container at " + block.getLocation());
 		}
 	}
 
