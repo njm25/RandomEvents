@@ -172,6 +172,20 @@ public class ConfigManager implements IConfigManager {
 
         if (value != null) {
             logger.warning("Invalid type for config value at " + path + ": expected int but got " + value);
+            // Try default config
+            Object defaultVal = defaultConfig.get(path);
+            if (defaultVal instanceof Number) {
+                // Replace invalid value with default
+                FileConfiguration config = plugin.getConfig();
+                config.set(path, defaultVal);
+                saveConfigFile(config);
+                logger.info("Replaced invalid int value at " + path + " with default: " + defaultVal);
+                return ((Number) defaultVal).intValue();
+            }
+            if (defaultVal != null) {
+                logger.warning("Invalid default type at " + path + ": expected int but got " + defaultVal);
+            }
+            return null;
         }
 
         // Try default config
@@ -197,6 +211,20 @@ public class ConfigManager implements IConfigManager {
 
         if (value != null) {
             logger.warning("Invalid type for config value at " + path + ": expected double but got " + value);
+            // Try default config
+            Object defaultVal = defaultConfig.get(path);
+            if (defaultVal instanceof Number) {
+                // Replace invalid value with default
+                FileConfiguration config = plugin.getConfig();
+                config.set(path, defaultVal);
+                saveConfigFile(config);
+                logger.info("Replaced invalid double value at " + path + " with default: " + defaultVal);
+                return ((Number) defaultVal).doubleValue();
+            }
+            if (defaultVal != null) {
+                logger.warning("Invalid default type at " + path + ": expected double but got " + defaultVal);
+            }
+            return null;
         }
 
         // Try default config
@@ -248,6 +276,21 @@ public class ConfigManager implements IConfigManager {
         if (value != null) {
             logger.warning(String.format("Invalid type for config value at '%s' in event '%s': expected boolean but got %s", 
                                        key, eventName, value.getClass().getSimpleName()));
+            // Try default config
+            Object defaultVal = defaultConfig.get(path);
+            if (defaultVal instanceof Boolean) {
+                // Replace invalid value with default
+                FileConfiguration config = plugin.getConfig();
+                config.set(path, defaultVal);
+                saveConfigFile(config);
+                logger.info("Replaced invalid boolean value at " + path + " with default: " + defaultVal);
+                return (Boolean) defaultVal;
+            }
+            if (defaultVal != null) {
+                logger.warning(String.format("Invalid default type at '%s' in event '%s': expected boolean but got %s", 
+                                           key, eventName, defaultVal.getClass().getSimpleName()));
+            }
+            return null;
         }
 
         // Try default config
@@ -262,6 +305,16 @@ public class ConfigManager implements IConfigManager {
         }
 
         return null;
+    }
+
+    // Helper method to save the config file
+    private void saveConfigFile(FileConfiguration config) {
+        try {
+            config.save(configFile);
+            plugin.reloadConfig();
+        } catch (Exception e) {
+            logger.severe("Error saving config.yml: " + e.getMessage());
+        }
     }
 
 }
