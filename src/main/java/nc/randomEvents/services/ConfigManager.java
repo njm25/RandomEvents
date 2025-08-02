@@ -14,7 +14,6 @@ import java.util.logging.Logger;
 interface IConfigManager {
     void reload();
     void setDefaults();
-    <T> T getConfigValue(String eventName, String key);
     Integer getIntValue(String eventName, String key);
     Double getDoubleValue(String eventName, String key);
     ConfigurationSection getEventConfig(BaseEvent event);
@@ -131,37 +130,6 @@ public class ConfigManager implements IConfigManager {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    public <T> T getConfigValue(String eventName, String key) {
-        String path = "events." + eventName + "." + key;
-        
-        // Try to get from current config
-        Object value = plugin.getConfig().get(path);
-        
-        // If not found in current config, try to get from defaults
-        if (value == null) {
-            value = defaultConfig.get(path);
-            if (value == null) {
-                logger.warning(String.format("No value or default found for key '%s' in event '%s'", 
-                                           key, eventName));
-                return null;
-            }
-            logger.info(String.format("Using default value for key '%s' in event '%s'", 
-                                    key, eventName));
-        }
-        
-        try {
-            return (T) value;
-        } catch (ClassCastException e) {
-            String expectedType = e.getMessage().contains("cannot be cast to") ? 
-                e.getMessage().split("cannot be cast to")[1].trim() : "unknown";
-            String actualType = value != null ? value.getClass().getSimpleName() : "null";
-            logger.warning(String.format("Invalid type for config value at '%s' in event '%s'. Expected: %s, Got: %s", 
-                                       key, eventName, expectedType, actualType));
-            return null;
-        }
-    }
-
     public Integer getIntValue(String eventName, String key) {
         String path = "events." + eventName + "." + key;
         Object value = plugin.getConfig().get(path);
@@ -246,11 +214,6 @@ public class ConfigManager implements IConfigManager {
 
     public Double getDoubleValue(BaseEvent event, String key) {
         return getDoubleValue(event.getName(), key);
-    }
-
-    // Keep the generic method for non-numeric types
-    public <T> T getConfigValue(BaseEvent event, String key) {
-        return getConfigValue(event.getName(), key);
     }
 
     public ConfigurationSection getEventConfig(BaseEvent event) {

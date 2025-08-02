@@ -8,12 +8,13 @@ import nc.randomEvents.services.SessionRegistry;
 import nc.randomEvents.utils.PersistentDataHelper;
 import org.bukkit.*;
 import org.bukkit.entity.*;
+import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.*;
 
 interface IEntityManager {
-    <T extends Entity> T spawnTracked(EntityType type, Location location, String entityId, UUID sessionId);
+    Entity spawnTracked(EntityType type, Location location, String entityId, UUID sessionId);
 }
 
 public class EntityManager implements SessionParticipant, IEntityManager {
@@ -39,12 +40,12 @@ public class EntityManager implements SessionParticipant, IEntityManager {
      * @param location The location to spawn at
      * @param entityId Unique identifier for this entity
      * @param sessionId The event session this entity belongs to
-     * @param <T> The specific entity type to spawn, must extend Entity
      * @return The spawned entity, or null if spawn failed
      */
-    @SuppressWarnings("unchecked") // Safe cast due to EntityType matching T
-    public <T extends Entity> T spawnTracked(EntityType type, Location location, String entityId, UUID sessionId) {
-        Entity entity = location.getWorld().spawnEntity(location, type);
+    @Override
+    public Entity spawnTracked(EntityType type, Location location, String entityId, UUID sessionId) {
+        Entity entity = location.getWorld().spawnEntity(location, type, SpawnReason.CUSTOM);
+        
         if (entity != null) {
             // Add persistent data
             PersistentDataHelper.set(entity.getPersistentDataContainer(), plugin, ENTITY_KEY, 
@@ -57,9 +58,7 @@ public class EntityManager implements SessionParticipant, IEntityManager {
             // Track the entity
             sessionEntities.computeIfAbsent(sessionId, k -> new HashSet<>()).add(entity.getUniqueId());
 
-            // Since EntityType.getEntityClass() returns the correct class for the entity type,
-            // and we spawn the entity using that same type, this cast is safe
-            return (T) entity;
+            return entity;
         }
         return null;
     }

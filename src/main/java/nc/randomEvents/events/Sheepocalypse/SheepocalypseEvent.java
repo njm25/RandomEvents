@@ -221,7 +221,7 @@ public class SheepocalypseEvent extends BaseEvent implements Listener {
         if (world == null) return;
 
         // Use EntityManager to spawn and track the sheep
-        Sheep sheep = entityManager.spawnTracked(org.bukkit.entity.EntityType.SHEEP, spawnLoc, "explosive_sheep", ownerUUID);
+        Sheep sheep = (Sheep)entityManager.spawnTracked(org.bukkit.entity.EntityType.SHEEP, spawnLoc, "explosive_sheep", ownerUUID);
         sheep.setRemoveWhenFarAway(true);
 
         // Play spawn sounds
@@ -230,7 +230,7 @@ public class SheepocalypseEvent extends BaseEvent implements Listener {
         SoundHelper.playWorldSoundSafely(world, "block.note.pling", spawnLoc, 1.0f, 2.0f);
 
         // Create sheep bomb with configurable timer
-        int bombTimerSeconds = plugin.getConfigManager().getConfigValue(getName(), "bombTimer");
+        int bombTimerSeconds = plugin.getConfigManager().getIntValue(getName(), "bombTimer");
         final SheepBomb[] sheepBombRef = new SheepBomb[1];
         sheepBombRef[0] = new SheepBomb(plugin, sheep, () -> activeSheep.remove(sheepBombRef[0]), bombTimerSeconds * 20);
         activeSheep.add(sheepBombRef[0]);
