@@ -246,15 +246,12 @@ public class SheepocalypseEvent extends BaseEvent implements Listener {
 
     @EventHandler
     public void onSheepShear(PlayerShearEntityEvent event) {
-        plugin.getLogger().info("[DEBUG] SheepocalypseEvent: Shear event fired, isEventActive=" + isEventActive);
         
         if (!isEventActive) {
-            plugin.getLogger().info("[DEBUG] SheepocalypseEvent: Event not active, ignoring");
             return;
         }
         
         if (!(event.getEntity() instanceof Sheep)) {
-            plugin.getLogger().info("[DEBUG] SheepocalypseEvent: Not a sheep, ignoring");
             return;
         }
 
@@ -262,8 +259,6 @@ public class SheepocalypseEvent extends BaseEvent implements Listener {
         
         Sheep sheep = (Sheep) event.getEntity();
         SheepBomb sheepBomb = null;
-
-        plugin.getLogger().info("[DEBUG] Sheepocalypse: Shearing attempt on sheep " + sheep.getUniqueId());
 
         for (SheepBomb bomb : activeSheep) {
             if (bomb.isSameSheep(sheep)) {
@@ -274,7 +269,6 @@ public class SheepocalypseEvent extends BaseEvent implements Listener {
 
         if (sheepBomb != null) {
             Player player = event.getPlayer();
-            plugin.getLogger().info("[DEBUG] Sheepocalypse: Found matching SheepBomb, starting shear sequence");
             
             // Cancel any pending explosion tasks immediately
             sheepBomb.cancelExplosion();
@@ -298,13 +292,10 @@ public class SheepocalypseEvent extends BaseEvent implements Listener {
             SoundHelper.playPlayerSoundSafely(player, "entity.player.levelup", player.getLocation(), 1.0f, 2.0f);
             
             // Start the shearing effect sequence
-            plugin.getLogger().info("[DEBUG] Sheepocalypse: Starting shear and poof effect");
             sheepBomb.playShearAndPoofEffect();
             
             // Remove from active sheep AFTER effects start
             activeSheep.remove(sheepBomb);
-        } else {
-            plugin.getLogger().warning("[DEBUG] Sheepocalypse: No matching SheepBomb found for sheep " + sheep.getUniqueId());
         }
     }
 
