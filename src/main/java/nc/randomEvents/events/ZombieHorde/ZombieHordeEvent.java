@@ -179,7 +179,7 @@ public class ZombieHordeEvent extends BaseEvent {
         }
 
         // Use EntityManager to spawn and track the zombie
-        Zombie zombie = entityManager.spawnTracked(EntityType.ZOMBIE, spawnLocation, "wave_" + waveNumber + "_zombie", player.getUniqueId());
+        Zombie zombie = (Zombie)entityManager.spawnTracked(EntityType.ZOMBIE, spawnLocation, "wave_" + waveNumber + "_zombie", player.getUniqueId());
         
         // Configure zombie attributes
         EntityHelper.setMaxHealth(zombie, 20.0);

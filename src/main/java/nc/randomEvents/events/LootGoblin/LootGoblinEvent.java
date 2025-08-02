@@ -116,7 +116,7 @@ public class LootGoblinEvent extends BaseEvent implements Listener {
         }
 
         // Spawn and track the goblin using EntityManager
-        PigZombie goblin = entityManager.spawnTracked(EntityType.ZOMBIFIED_PIGLIN, spawnLoc, "loot_goblin", player.getUniqueId());
+        PigZombie goblin = (PigZombie)entityManager.spawnTracked(EntityType.ZOMBIFIED_PIGLIN, spawnLoc, "loot_goblin", player.getUniqueId());
         
         // Add loot goblin tag
         PersistentDataHelper.set(goblin.getPersistentDataContainer(), plugin, LOOT_GOBLIN_TAG, PersistentDataType.BYTE, (byte)1);

@@ -221,7 +221,7 @@ public class SheepocalypseEvent extends BaseEvent implements Listener {
         if (world == null) return;
 
         // Use EntityManager to spawn and track the sheep
-        Sheep sheep = entityManager.spawnTracked(org.bukkit.entity.EntityType.SHEEP, spawnLoc, "explosive_sheep", ownerUUID);
+        Sheep sheep = (Sheep)entityManager.spawnTracked(org.bukkit.entity.EntityType.SHEEP, spawnLoc, "explosive_sheep", ownerUUID);
         sheep.setRemoveWhenFarAway(true);
 
         // Play spawn sounds

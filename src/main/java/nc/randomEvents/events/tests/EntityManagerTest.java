@@ -151,7 +151,7 @@ public class EntityManagerTest extends BaseEvent {
         
         // Spawn 4 zombies to orbit the player
         for (int i = 0; i < 4; i++) {
-            Zombie zombie = entityManager.spawnTracked(EntityType.ZOMBIE, center.clone().add(5, 0, 0), "orbit_zombie_" + i, sessionId);
+            Zombie zombie = (Zombie)entityManager.spawnTracked(EntityType.ZOMBIE, center.clone().add(5, 0, 0), "orbit_zombie_" + i, sessionId);
             zombie.customName(Component.text("Orbiting Zombie " + (i + 1)));
             zombie.setCustomNameVisible(true);
             EntityHelper.setMaxHealth(zombie, 20.0);
@@ -176,7 +176,7 @@ public class EntityManagerTest extends BaseEvent {
             // Remove helper-spawned entity and replace with a tracked one
             ringEntities[i].remove();
 
-            Skeleton skeleton = entityManager.spawnTracked(
+            Skeleton skeleton = (Skeleton)entityManager.spawnTracked(
                     EntityType.SKELETON, loc, "ring_skeleton_" + i, sessionId);
 
             skeleton.customName(Component.text("Ring Skeleton"));
@@ -201,7 +201,7 @@ public class EntityManagerTest extends BaseEvent {
                 Math.random() * 6 - 3
             );
             
-            Bat bat = entityManager.spawnTracked(EntityType.BAT, spawnLoc, "hover_bat_" + i, sessionId);
+            Bat bat = (Bat)entityManager.spawnTracked(EntityType.BAT, spawnLoc, "hover_bat_" + i, sessionId);
             bat.customName(Component.text("Hovering Bat " + (i + 1)));
             bat.setCustomNameVisible(true);
             bat.setAwake(true);
@@ -223,7 +223,7 @@ public class EntityManagerTest extends BaseEvent {
                 Math.random() * 4 - 2
             );
             
-            Slime slime = entityManager.spawnTracked(EntityType.SLIME, spawnLoc, "launch_slime_" + i, sessionId);
+            Slime slime = (Slime)entityManager.spawnTracked(EntityType.SLIME, spawnLoc, "launch_slime_" + i, sessionId);
             slime.customName(Component.text("Launch Slime " + (i + 1)));
             slime.setCustomNameVisible(true);
             slime.setSize(1);

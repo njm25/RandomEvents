@@ -154,7 +154,7 @@ public class MeteorEvent extends BaseEvent implements Listener {
         LivingEntity entity = null;
         
         if (random.nextDouble() < enemySpawnChance) {
-            entity = entityManager.spawnTracked(EntityType.BLAZE, location, "meteor_blaze", sessionId);
+            entity = (Blaze)entityManager.spawnTracked(EntityType.BLAZE, location, "meteor_blaze", sessionId);
             
             if (entity instanceof Blaze) {
                 spawnedEnemyCount++; // Increment counter on successful spawn
@@ -198,7 +198,7 @@ public class MeteorEvent extends BaseEvent implements Listener {
                 }.runTaskTimer(plugin, 20L, 30L); // Shoot every second (20 ticks)
             }
         } else if (random.nextDouble() < enemySpawnChance) {
-            entity = entityManager.spawnTracked(EntityType.MAGMA_CUBE, location, "meteor_magma", sessionId);
+            entity = (MagmaCube)entityManager.spawnTracked(EntityType.MAGMA_CUBE, location, "meteor_magma", sessionId);
             if (entity instanceof MagmaCube) {
                 spawnedEnemyCount++; // Increment counter on successful spawn
                 MagmaCube magma = (MagmaCube) entity;
