@@ -94,7 +94,7 @@ public class EntityManagerTest extends BaseEvent {
                     if (entities != null) {
                         entities.forEach(entity -> {
                             EntityHelper.hover(entity, 3.0, 0.1);
-                            EntityHelper.createParticleTrail(entity, Particle.DRAGON_BREATH, 1, 0.2, 0.2, 0.2, 0);
+                            EntityHelper.createParticleTrail(entity, Particle.CLOUD, 1, 0.2, 0.2, 0.2, 0);
                         });
                     }
                     
